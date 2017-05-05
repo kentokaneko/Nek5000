@@ -29,6 +29,9 @@ c     Operator splitting technique.
       call setup_convect(2)  ! Map vx --> vxd
       call setprop
 
+      if (neknek) call userchk_set_xfer
+      if (neknek) call bcopy
+
       call pn2_step(vx,vy,vz,pr,0,dt2)      ! One step of Pn-Pn-2, dt/2
 
       if (ifmvbd) then

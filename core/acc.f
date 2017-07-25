@@ -7,7 +7,6 @@ c-----------------------------------------------------------------------
       integer icalld
       save    icalld
       data    icalld/0/
-
       if (icalld.eq.0) then ! ONE TIME ONLY
 
         icalld=1
@@ -28,6 +27,7 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (bfx,bfy,bfz)
 !$acc   enter data copyin (vx,vy,vz)
 !$acc   enter data copyin (vtrans)
+!$acc   enter data copyin (vxlag,vylag,vzlag)
 
 c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)
@@ -405,10 +405,9 @@ c
       call advab_acc
       call chck('cbb')
       call makeabf_acc
-!$ACC UPDATE HOST (bfx,bfy,bfz)
       call chck('dbb')
-      !call makebdf_acc
-      call makebdf
+      call makebdf_acc
+!$ACC UPDATE HOST (bfx,bfy,bfz)
       call chck('ebb')
 
       return
@@ -758,30 +757,35 @@ C     Add contributions to F from lagged BD terms.
       include 'INPUT'
       include 'TSTEP'
 
-      COMMON /SCRNS/ TA1(LX1,LY1,LZ1,LELV)
-     $ ,             TA2(LX1,LY1,LZ1,LELV)
-     $ ,             TA3(LX1,LY1,LZ1,LELV)
-     $ ,             TB1(LX1,LY1,LZ1,LELV)
-     $ ,             TB2(LX1,LY1,LZ1,LELV)
-     $ ,             TB3(LX1,LY1,LZ1,LELV)
-     $ ,             H2 (LX1,LY1,LZ1,LELV)
+      COMMON /SCRNS/ TA1(LX1*LY1*LZ1*LELT)
+     $ ,             TA2(LX1*LY1*LZ1*LELT)
+     $ ,             TA3(LX1*LY1*LZ1*LELT)
+     $ ,             TB1(LX1*LY1*LZ1*LELT)
+     $ ,             TB2(LX1*LY1*LZ1*LELT)
+     $ ,             TB3(LX1*LY1*LZ1*LELT)
+     $ ,             H2 (LX1*LY1*LZ1*LELT)
 
-      ntot1 = nx1*ny1*nz1*nelv
+      ntot1 = lx1*ly1*lz1*lelt
       const = 1./DT
+
+!$acc data create (ta1,ta2,ta3,tb1,tb2,tb3) copyin(h2) 
+!$acc& present(bfx,bfy,bfz,vtrans,vxlag,vylag,vzlag,bm1)
 
       call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
 
-!$acc data create (tb1,tb2,tb3)
+      call chck('r1')
       CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
 
       do ilag=2,nbd
 
          if (ifgeom) then
+            call chck('r2')
             CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
      $                                VYLAG (1,1,1,1,ILAG-1),
      $                                VZLAG (1,1,1,1,ILAG-1),
      $                                BM1LAG(1,1,1,1,ILAG-1),bd(ilag+1))
          else
+            call chck('r3')
             CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
      $                                VYLAG (1,1,1,1,ILAG-1),
      $                                VZLAG (1,1,1,1,ILAG-1),
@@ -852,11 +856,15 @@ c-----------------------------------------------------------------------
       subroutine opcolv3c_acc(a1,a2,a3,b1,b2,b3,c,d)
 c-----------------------------------------------------------------------
       include 'SIZE'
-      real a1(n),a2(n),a3(n)
-      real b1(n),b2(n),b3(n)
-      real c (n)
+      real a1(lx1*ly1*lz1*lelt),
+     $     a2(lx1*ly1*lz1*lelt),
+     $     a3(lx1*ly1*lz1*lelt),
+     $     b1(lx1*ly1*lz1*lelt),
+     $     b2(lx1*ly1*lz1*lelt),
+     $     b3(lx1*ly1*lz1*lelt),
+     $     c (lx1*ly1*lz1*lelt)
 
-      ntot1= nx1*ny1*nz1*nelv
+      ntot1= lx1*ly1*lz1*lelt
 
 !$acc parallel loop present(a1,a2,a3,b1,b2,b3,c)
       do i=1,ntot1
@@ -871,9 +879,14 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine opadd2_acc (a1,a2,a3,b1,b2,b3)
       include 'SIZE'
-      REAL A1(1),A2(1),A3(1),B1(1),B2(1),B3(1)
+      REAL A1(lx1*ly1*lz1*lelt),
+     $     A2(lx1*ly1*lz1*lelt),
+     $     A3(lx1*ly1*lz1*lelt),
+     $     B1(lx1*ly1*lz1*lelt),
+     $     B2(lx1*ly1*lz1*lelt),
+     $     B3(lx1*ly1*lz1*lelt)
 
-      NTOT1=NX1*NY1*NZ1*NELV
+      NTOT1=lx1*ly1*lz1*lelt
 
       CALL ADD2_ACC(A1,B1,NTOT1)
       CALL ADD2_ACC(A2,B2,NTOT1)
@@ -884,11 +897,14 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine opadd2col_acc(a1,a2,a3,b1,b2,b3,c)
       include 'SIZE'
-      REAL A1(1),A2(1),A3(1)
-      REAL B1(1),B2(1),B3(1),C(1)
+      REAL A1(lx1*ly1*lz1*lelt),
+     $     A2(lx1*ly1*lz1*lelt),
+     $     A3(lx1*ly1*lz1*lelt),
+     $     B1(lx1*ly1*lz1*lelt),
+     $     B2(lx1*ly1*lz1*lelt),
+     $     B3(lx1*ly1*lz1*lelt)
 
-      NTOT1=NX1*NY1*NZ1*NELV
-
+      NTOT1=lx1*ly1*lz1*lelt
 
       IF (NDIM.EQ.3) THEN
          call add2col2(a1,b1,c,ntot1)

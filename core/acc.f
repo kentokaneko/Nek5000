@@ -406,8 +406,8 @@ c
       call chck('cbb')
       call makeabf_acc
       call chck('dbb')
-      call makebdf_acc
 !$ACC UPDATE HOST (bfx,bfy,bfz)
+      call makebdf_acc
       call chck('ebb')
 
       return
@@ -757,7 +757,7 @@ C     Add contributions to F from lagged BD terms.
       include 'INPUT'
       include 'TSTEP'
 
-      COMMON /SCRNS/ TA1(LX1*LY1*LZ1*LELT)
+      real TA1(LX1*LY1*LZ1*LELT)
      $ ,             TA2(LX1*LY1*LZ1*LELT)
      $ ,             TA3(LX1*LY1*LZ1*LELT)
      $ ,             TB1(LX1*LY1*LZ1*LELT)
@@ -767,25 +767,24 @@ C     Add contributions to F from lagged BD terms.
 
       ntot1 = lx1*ly1*lz1*lelt
       const = 1./DT
-
-!$acc data create (ta1,ta2,ta3,tb1,tb2,tb3) copyin(h2) 
-!$acc& present(bfx,bfy,bfz,vtrans,vxlag,vylag,vzlag,bm1)
-
+!$acc data copyout(h2,tb1,tb2,tb3) 
+!$acc& present(vtrans,vx,vy,vz,bm1,vxlag,vylag,vzlag)
       call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
 
       call chck('r1')
-      CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
+      CALL opcolv3c_acc(tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
+
 
       do ilag=2,nbd
 
          if (ifgeom) then
-            call chck('r2')
-            CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
+            call chck('rT')
+            CALL opcolv3c(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
      $                                VYLAG (1,1,1,1,ILAG-1),
      $                                VZLAG (1,1,1,1,ILAG-1),
      $                                BM1LAG(1,1,1,1,ILAG-1),bd(ilag+1))
          else
-            call chck('r3')
+            call chck('rF')
             CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
      $                                VYLAG (1,1,1,1,ILAG-1),
      $                                VZLAG (1,1,1,1,ILAG-1),
@@ -793,9 +792,9 @@ C     Add contributions to F from lagged BD terms.
          endif
          call opadd2_acc (TB1,TB2,TB3,TA1,TA2,TA3)
       enddo
-      call opadd2col_acc (BFX,BFY,BFZ,TB1,TB2,TB3,h2)
-
 !$acc end data
+
+      call opadd2col (BFX,BFY,BFZ,TB1,TB2,TB3,h2)
 
       return
       end

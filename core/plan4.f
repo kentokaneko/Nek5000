@@ -47,7 +47,7 @@ C
       if (igeom.eq.1) then
 
          call plan4_acc_data_copyin()
-         call makef 
+         call makef_acc
          call sumab(vx_e,vx,vxlag,ntot1,ab,nab)
          call sumab(vy_e,vy,vylag,ntot1,ab,nab)
          if (if3d) call sumab(vz_e,vz,vzlag,ntot1,ab,nab)

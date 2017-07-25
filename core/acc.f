@@ -24,6 +24,8 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (g1m1,g2m1,g3m1,g4m1,g5m1,g6m1)
 !$acc   enter data copyin (cbc,bc)
 !$acc   enter data copyin (bx1,aby1,abz1,abx2,aby2,abz2)
+!$acc   enter data copyin (bfx,bfy,bfz)
+
 c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)
 c!$acc   enter data copyin (bfx,bfy,bfz,bq,t,pr,prlag,qtl,usrdiv)
@@ -118,16 +120,15 @@ c-----------------------------------------------------------------------
       real    a(n)
       character*4 text
 
-#ifdef _OPENACC
 !$ACC update host(a) if (mode.eq.1)  !copies the data from device to host
-#endif
-c     if (nid.eq.0) write(6,*) text,(a(i),i=300,n) ! prints data on host
       if (nid.eq.0) then
-         do i=1,n
-            write(6,10) text,i,a(i)
-         enddo
- 10      format(a4,i300,1p1e15.4)
+!         do i=1,n
+!            write(6,10) text,i,a(i)
+!         enddo
+! 10      format(a4,i300,1p1e15.4)
+          write(6,102) text, (a(i), i=1,4)
       endif
+  102    format(a4,2x,1p4e15.4)
 
       return
       end
@@ -396,12 +397,16 @@ c
 
       call chck('abb')
       call makeuf_acc    ! paul and som
+!$ACC UPDATE HOST (bfx,bfy,bfz)
       call chck('bbb')
-      call advab_acc
+      !call advab_acc
+      call advab
       call chck('cbb')
-      call makeabf_acc
+      !call makeabf_acc
+      call makeabf
       call chck('dbb')
-      call makebdf_acc
+      !call makebdf_acc
+      call makebdf
       call chck('ebb')
 
       return
@@ -421,7 +426,10 @@ C----------------------------------------------------------------------
 
       TIME = TIME-DT
 
-      CALL oprzero_acc (BFX,BFY,BFZ)
+!$acc update host      (bfx,bfy,bfz)
+      call nekuf       (bfx,bfy,bfz)
+!$acc update device    (bfx,bfy,bfz)
+
       CALL opcolv_acc (BFX,BFY,BFZ,BM1)
 
       TIME = TIME+DT

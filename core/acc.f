@@ -767,8 +767,8 @@ C     Add contributions to F from lagged BD terms.
 
       ntot1 = lx1*ly1*lz1*lelt
       const = 1./DT
-!$acc data copyout(h2,tb1,tb2,tb3) 
-!$acc& present(vtrans,vx,vy,vz,bm1,vxlag,vylag,vzlag)
+c!$acc data copyout(h2,tb1,tb2,tb3) 
+c!$acc& present(vtrans,vx,vy,vz,bm1,vxlag,vylag,vzlag)
       call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
 
       call chck('r1')
@@ -792,9 +792,9 @@ C     Add contributions to F from lagged BD terms.
          endif
          call opadd2_acc (TB1,TB2,TB3,TA1,TA2,TA3)
       enddo
-!$acc end data
+c!$acc end data
 
-      call opadd2col (BFX,BFY,BFZ,TB1,TB2,TB3,h2)
+      call opadd2col_acc (BFX,BFY,BFZ,TB1,TB2,TB3,h2)
 
       return
       end
@@ -906,12 +906,12 @@ c-----------------------------------------------------------------------
       NTOT1=lx1*ly1*lz1*lelt
 
       IF (NDIM.EQ.3) THEN
-         call add2col2(a1,b1,c,ntot1)
-         call add2col2(a2,b2,c,ntot1)
-         call add2col2(a3,b3,c,ntot1)
+         call add2col2_acc(a1,b1,c,ntot1)
+         call add2col2_acc(a2,b2,c,ntot1)
+         call add2col2_acc(a3,b3,c,ntot1)
       ELSE
-         call add2col2(a1,b1,c,ntot1)
-         call add2col2(a2,b2,c,ntot1)
+         call add2col2_acc(a1,b1,c,ntot1)
+         call add2col2_acc(a2,b2,c,ntot1)
       ENDIF
 
       return

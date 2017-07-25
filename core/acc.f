@@ -25,6 +25,7 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (cbc,bc)
 !$acc   enter data copyin (bx1,aby1,abz1,abx2,aby2,abz2)
 !$acc   enter data copyin (bfx,bfy,bfz)
+!$acc   enter data copyin (vx,vy,vz)
 
 c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)
@@ -397,10 +398,10 @@ c
 
       call chck('abb')
       call makeuf_acc    ! paul and som
-!$ACC UPDATE HOST (bfx,bfy,bfz)
       call chck('bbb')
       !call advab_acc
-      call advab
+      call advab_acc
+!$ACC UPDATE HOST (bfx,bfy,bfz)
       call chck('cbb')
       !call makeabf_acc
       call makeabf
@@ -493,7 +494,7 @@ C---------------------------------------------------------------
       call convop_acc  (ta3,vz)
       call chck('d11')
 
-!$acc parallel loop 
+!$acc parallel loop
       do i=1,n
          bfx(i,1,1,1)=bfx(i,1,1,1)-ta1(i)*bm1(i,1,1,1)
          bfy(i,1,1,1)=bfy(i,1,1,1)-ta2(i)*bm1(i,1,1,1)

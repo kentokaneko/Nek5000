@@ -2231,7 +2231,7 @@ c-----------------------------------------------------------------------
       subroutine add2s1_acc(a,b,c1,n)
       real a(n),b(n),c1     
   
-!$ACC PARALLEL LOOP PRESENT(a,b,c1)
+!$ACC PARALLEL LOOP PRESENT(a,b)
       do i=1,n
         a(i)=c1*a(i)+b(i)
       enddo    

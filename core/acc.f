@@ -23,9 +23,11 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (rzm1,szm1,tzm1)
 !$acc   enter data copyin (g1m1,g2m1,g3m1,g4m1,g5m1,g6m1)
 !$acc   enter data copyin (cbc,bc)
-!$acc   enter data copyin (bx1,aby1,abz1,abx2,aby2,abz2)
+!$acc   enter data copyin (abx1,aby1,abz1,abx2,aby2,abz2)
+!$acc   enter data copyin (ab)
 !$acc   enter data copyin (bfx,bfy,bfz)
 !$acc   enter data copyin (vx,vy,vz)
+!$acc   enter data copyin (vtrans)
 
 c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)
@@ -401,10 +403,9 @@ c
       call chck('bbb')
       !call advab_acc
       call advab_acc
-!$ACC UPDATE HOST (bfx,bfy,bfz)
       call chck('cbb')
-      !call makeabf_acc
-      call makeabf
+      call makeabf_acc
+!$ACC UPDATE HOST (bfx,bfy,bfz)
       call chck('dbb')
       !call makebdf_acc
       call makebdf

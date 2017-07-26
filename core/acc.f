@@ -765,7 +765,7 @@ C     Add contributions to F from lagged BD terms.
      $ ,   TB3(LX1*LY1*LZ1*LELV)
      $ ,   H2 (LX1*LY1*LZ1*LELV)
 
-      ntot1 = nx1*ny1*nz1*nelv
+      ntot1 = lx1*ly1*lz1*lelt
       const = 1./DT
 
 !$acc update device(bfx,bfy,bfz)
@@ -854,7 +854,7 @@ c-----------------------------------------------------------------------
       subroutine opcolv3c_acc(a1,a2,a3,b1,b2,b3,c,d)
 c-----------------------------------------------------------------------
       include 'SIZE'
-      parameter (n = lx1*ly1*lz1*lelv)
+      parameter (n = lx1*ly1*lz1*lelt)
       real a1(n),a2(n),a3(n)
       real b1(n),b2(n),b3(n)
       real c (n)
@@ -872,9 +872,14 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine opadd2_acc (a1,a2,a3,b1,b2,b3)
       include 'SIZE'
-      REAL A1(1),A2(1),A3(1),B1(1),B2(1),B3(1)
+      REAL A1(lx1*ly1*lz1*lelt),
+     $     A2(lx1*ly1*lz1*lelt),
+     $     A3(lx1*ly1*lz1*lelt),
+     $     B1(lx1*ly1*lz1*lelt),
+     $     B2(lx1*ly1*lz1*lelt),
+     $     B3(lx1*ly1*lz1*lelt)
 
-      NTOT1=NX1*NY1*NZ1*NELV
+      NTOT1=lx1*ly1*lz1*lelt
 
       CALL ADD2_ACC(A1,B1,NTOT1)
       CALL ADD2_ACC(A2,B2,NTOT1)
@@ -885,11 +890,14 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine opadd2col_acc(a1,a2,a3,b1,b2,b3,c)
       include 'SIZE'
-      REAL A1(1),A2(1),A3(1)
-      REAL B1(1),B2(1),B3(1),C(1)
+      REAL A1(lx1*ly1*lz1*lelt),
+     $     A2(lx1*ly1*lz1*lelt),
+     $     A3(lx1*ly1*lz1*lelt),
+     $     B1(lx1*ly1*lz1*lelt),
+     $     B2(lx1*ly1*lz1*lelt),
+     $     B3(lx1*ly1*lz1*lelt)
 
-      NTOT1=NX1*NY1*NZ1*NELV
-
+      NTOT1=lx1*ly1*lz1*lelt
 
       IF (NDIM.EQ.3) THEN
          call add2col2(a1,b1,c,ntot1)

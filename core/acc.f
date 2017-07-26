@@ -14,7 +14,7 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (v1mask,v2mask,v3mask,pmask,tmask,omask)
 !$acc   enter data copyin (pmult,tmult,vmult)
 !$acc   enter data copyin (dxm1,dxtm1,w3m1)
-!$acc   enter data copyin (bm1,binvm1,bintm1)
+!$acc   enter data copyin (bm1,bm1lag,binvm1,bintm1)
 !$acc   enter data copyin (jacm1,jacmi)
 !$acc   enter data copyin (xm1,ym1,zm1)
 !$acc   enter data copyin (unx,uny,unz,area)
@@ -770,14 +770,13 @@ C     Add contributions to F from lagged BD terms.
 
       NTOT1 = NX1*NY1*NZ1*NELV
       const = 1./DT
-
-c!$acc update device(bfx,bfy,bfz)
-c!$acc data copyin (vtrans,vx,vy,vz,vxlag,vylag,vzlag,bm1)
-c!$acc&     copyin (ta1,ta2,ta3,tb1,tb2,tb3,h2)
+!$acc enter data copyin(vtrans,vx,vy,vz,vxlag,vylag,vzlag,bd)
+!$acc& create(ta1,ta2,ta3,tb1,tb2,tb3,h2)
 
 c     INLINED:
 c     call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
-      do e = 1, lelv
+!$acc parallel loop
+      do e = 1, nelv
       do k = 1, lz1
       do j = 1, ly1
       do i = 1, lx1
@@ -786,10 +785,12 @@ c     call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
       enddo
       enddo
       enddo
+!$acc end parallel
 
 c     INLINED:
 c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
-      do e = 1, lelv
+!$acc parallel loop
+      do e = 1, nelv
       do k = 1, lz1
       do j = 1, ly1
       do i = 1, lx1
@@ -800,16 +801,18 @@ c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
       enddo
       enddo
       enddo
+!$acc end parallel
 
       do ilag=2,nbd
 
-c        INLINED:
          if (ifgeom) then
+c        INLINED:
 c           CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
 c    $                                VYLAG (1,1,1,1,ILAG-1),
 c    $                                VZLAG (1,1,1,1,ILAG-1),
 c    $                                BM1LAG(1,1,1,1,ILAG-1),bd(ilag+1))
-            do e = 1, lelv
+!$acc parallel loop
+            do e = 1, nelv
             do k = 1, lz1
             do j = 1, ly1
             do i = 1, lx1
@@ -826,13 +829,15 @@ c    $                                BM1LAG(1,1,1,1,ILAG-1),bd(ilag+1))
             enddo
             enddo
             enddo
+!$acc end parallel
          else
 c           INLINED:
 c           CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
 c    $                                VYLAG (1,1,1,1,ILAG-1),
 c    $                                VZLAG (1,1,1,1,ILAG-1),
 c    $                                BM1                   ,bd(ilag+1))
-            do e = 1, lelv
+!$acc parallel
+            do e = 1, nelv
             do k = 1, lz1
             do j = 1, ly1
             do i = 1, lx1
@@ -849,6 +854,7 @@ c    $                                BM1                   ,bd(ilag+1))
             enddo
             enddo
             enddo
+!$acc end parallel
          endif
 c        INLINED:
 c        call opadd2_acc(TB1,TB2,TB3,TA1,TA2,TA3)
@@ -856,7 +862,8 @@ c         =
 c          CALL ADD2(TB1,TA1,NTOT1)
 c          CALL ADD2(TB2,TA2,NTOT1)
 c          IF(NDIM.EQ.3)CALL ADD2(TB3,TA3,NTOT1)
-         do e = 1, lelv
+!$acc parallel
+         do e = 1, nelv
          do k = 1, lz1
          do j = 1, ly1
          do i = 1, lx1
@@ -867,11 +874,14 @@ c          IF(NDIM.EQ.3)CALL ADD2(TB3,TA3,NTOT1)
          enddo
          enddo
          enddo
+!$acc end parallel
       enddo
 
 c     INLINED:
 c     call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)
-      do e = 1, lelv
+!$acc update device(bfx,bfy,bfz)
+!$acc parallel
+      do e = 1, nelv
       do k = 1, lz1
       do j = 1, ly1
       do i = 1, lx1
@@ -882,9 +892,9 @@ c     call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)
       enddo
       enddo
       enddo
-
-c!$acc end data
-c!$acc update host (bfx,bfy,bfz)
+!$acc end parallel
+!$acc update host (bfx,bfy,bfz)
+!$acc exit data
 
       return
       end
@@ -942,24 +952,24 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine opcolv3c_acc(a1,a2,a3,b1,b2,b3,c,d)
+c      subroutine opcolv3c_acc(a1,a2,a3,b1,b2,b3,c,d)
 c-----------------------------------------------------------------------
-      include 'SIZE'
-      parameter (n = lx1*ly1*lz1*lelt)
-      real a1(n),a2(n),a3(n)
-      real b1(n),b2(n),b3(n)
-      real c (n)
-
-!$acc parallel loop present(a1,a2,a3,b1,b2,b3,c)
-      do i=1,n
-         a1(i)=b1(i)*c(i)*d
-         a2(i)=b2(i)*c(i)*d
-         a3(i)=b3(i)*c(i)*d
-      enddo
-!$acc end parallel 
-
-      return
-      end
+c      include 'SIZE'
+c      parameter (n = lx1*ly1*lz1*lelt)
+c      real a1(n),a2(n),a3(n)
+c      real b1(n),b2(n),b3(n)
+c      real c (n)
+c
+c!$acc parallel loop present(a1,a2,a3,b1,b2,b3,c)
+c      do i=1,n
+c         a1(i)=b1(i)*c(i)*d
+c         a2(i)=b2(i)*c(i)*d
+c         a3(i)=b3(i)*c(i)*d
+c      enddo
+c!$acc end parallel 
+c
+c      return
+c      end
 c-----------------------------------------------------------------------
       subroutine opadd2_acc (a1,a2,a3,b1,b2,b3)
       include 'SIZE'

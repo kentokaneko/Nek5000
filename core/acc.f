@@ -28,6 +28,7 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (bfx,bfy,bfz)
 !$acc   enter data copyin (vx,vy,vz)
 !$acc   enter data copyin (vtrans)
+!$acc   enter data copyin (vxlag,vylag,vzlag)
 
 c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)
@@ -757,13 +758,13 @@ C     Add contributions to F from lagged BD terms.
       include 'INPUT'
       include 'TSTEP'
 
-      real TA1(LX1*LY1*LZ1*LELV)
-     $ ,   TA2(LX1*LY1*LZ1*LELV)
-     $ ,   TA3(LX1*LY1*LZ1*LELV)
-     $ ,   TB1(LX1*LY1*LZ1*LELV)
-     $ ,   TB2(LX1*LY1*LZ1*LELV)
-     $ ,   TB3(LX1*LY1*LZ1*LELV)
-     $ ,   H2 (LX1*LY1*LZ1*LELV)
+      real TA1(LX1*LY1*LZ1*LELT)
+     $ ,             TA2(LX1*LY1*LZ1*LELT)
+     $ ,             TA3(LX1*LY1*LZ1*LELT)
+     $ ,             TB1(LX1*LY1*LZ1*LELT)
+     $ ,             TB2(LX1*LY1*LZ1*LELT)
+     $ ,             TB3(LX1*LY1*LZ1*LELT)
+     $ ,             H2 (LX1*LY1*LZ1*LELT)
 
       ntot1 = lx1*ly1*lz1*lelt
       const = 1./DT

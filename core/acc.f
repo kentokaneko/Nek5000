@@ -13,7 +13,7 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (v1mask,v2mask,v3mask,pmask,tmask,omask)
 !$acc   enter data copyin (pmult,tmult,vmult)
 !$acc   enter data copyin (dxm1,dxtm1,w3m1)
-!$acc   enter data copyin (bm1,binvm1,bintm1)
+!$acc   enter data copyin (bm1,bm1lag,binvm1,bintm1)
 !$acc   enter data copyin (jacm1,jacmi)
 !$acc   enter data copyin (xm1,ym1,zm1)
 !$acc   enter data copyin (unx,uny,unz,area)
@@ -757,44 +757,143 @@ C     Add contributions to F from lagged BD terms.
       include 'INPUT'
       include 'TSTEP'
 
-      real TA1(LX1*LY1*LZ1*LELT)
-     $ ,             TA2(LX1*LY1*LZ1*LELT)
-     $ ,             TA3(LX1*LY1*LZ1*LELT)
-     $ ,             TB1(LX1*LY1*LZ1*LELT)
-     $ ,             TB2(LX1*LY1*LZ1*LELT)
-     $ ,             TB3(LX1*LY1*LZ1*LELT)
-     $ ,             H2 (LX1*LY1*LZ1*LELT)
+      integer e
 
-      ntot1 = lx1*ly1*lz1*lelt
+      real TA1(LX1,LY1,LZ1,LELV)
+     $ ,   TA2(LX1,LY1,LZ1,LELV)
+     $ ,   TA3(LX1,LY1,LZ1,LELV)
+     $ ,   TB1(LX1,LY1,LZ1,LELV)
+     $ ,   TB2(LX1,LY1,LZ1,LELV)
+     $ ,   TB3(LX1,LY1,LZ1,LELV)
+     $ ,   H2 (LX1,LY1,LZ1,LELV)
+
+      NTOT1 = NX1*NY1*NZ1*NELV
       const = 1./DT
-c!$acc data copyout(h2,tb1,tb2,tb3) 
-c!$acc& present(vtrans,vx,vy,vz,bm1,vxlag,vylag,vzlag)
-      call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
+!$acc enter data copyin(vtrans,vx,vy,vz,vxlag,vylag,vzlag,bd)
+!$acc& create(ta1,ta2,ta3,tb1,tb2,tb3,h2)
 
-      call chck('r1')
-      CALL opcolv3c_acc(tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
+c     INLINED:
+c     call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
+!$acc parallel loop
+      do e = 1, nelv
+      do k = 1, lz1
+      do j = 1, ly1
+      do i = 1, lx1
+         h2(i,j,k,e)=vtrans(i,j,k,e,ifield)*const
+      enddo
+      enddo
+      enddo
+      enddo
+!$acc end parallel
 
+c     INLINED:
+c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
+!$acc parallel loop
+      do e = 1, nelv
+      do k = 1, lz1
+      do j = 1, ly1
+      do i = 1, lx1
+         tb1(i,j,k,e)=vx(i,j,k,e)*bm1(i,j,k,e)*bd(2)
+         tb2(i,j,k,e)=vy(i,j,k,e)*bm1(i,j,k,e)*bd(2)
+         tb3(i,j,k,e)=vz(i,j,k,e)*bm1(i,j,k,e)*bd(2)
+      enddo
+      enddo
+      enddo
+      enddo
+!$acc end parallel
 
       do ilag=2,nbd
 
          if (ifgeom) then
-            call chck('rT')
-            CALL opcolv3c(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
-     $                                VYLAG (1,1,1,1,ILAG-1),
-     $                                VZLAG (1,1,1,1,ILAG-1),
-     $                                BM1LAG(1,1,1,1,ILAG-1),bd(ilag+1))
+c        INLINED:
+c           CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
+c    $                                VYLAG (1,1,1,1,ILAG-1),
+c    $                                VZLAG (1,1,1,1,ILAG-1),
+c    $                                BM1LAG(1,1,1,1,ILAG-1),bd(ilag+1))
+!$acc parallel loop
+            do e = 1, nelv
+            do k = 1, lz1
+            do j = 1, ly1
+            do i = 1, lx1
+               ta1(i,j,k,e) = vxlag(i,j,k,e,ilag-1)  * 
+     $                        bm1lag(i,j,k,e,ilag-1) *
+     $                        bd(ilag+1)
+               ta2(i,j,k,e) = vylag(i,j,k,e,ilag-1)  * 
+     $                        bm1lag(i,j,k,e,ilag-1) *
+     $                        bd(ilag+1)
+               ta3(i,j,k,e) = vzlag(i,j,k,e,ilag-1)  * 
+     $                        bm1lag(i,j,k,e,ilag-1) *
+     $                        bd(ilag+1)
+            enddo
+            enddo
+            enddo
+            enddo
+!$acc end parallel
          else
-            call chck('rF')
-            CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
-     $                                VYLAG (1,1,1,1,ILAG-1),
-     $                                VZLAG (1,1,1,1,ILAG-1),
-     $                                BM1                   ,bd(ilag+1))
+c           INLINED:
+c           CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
+c    $                                VYLAG (1,1,1,1,ILAG-1),
+c    $                                VZLAG (1,1,1,1,ILAG-1),
+c    $                                BM1                   ,bd(ilag+1))
+!$acc parallel
+            do e = 1, nelv
+            do k = 1, lz1
+            do j = 1, ly1
+            do i = 1, lx1
+               ta1(i,j,k,e) = vxlag(i,j,k,e,ilag-1)  * 
+     $                        bm1(i,j,k,ilag-1+e) *
+     $                        bd(ilag+1)
+               ta2(i,j,k,e) = vylag(i,j,k,e,ilag-1)  * 
+     $                        bm1(i,j,k,ilag-1+e) *
+     $                        bd(ilag+1)
+               ta3(i,j,k,e) = vzlag(i,j,k,e,ilag-1)  * 
+     $                        bm1(i,j,k,ilag-1+e) *
+     $                        bd(ilag+1)
+            enddo
+            enddo
+            enddo
+            enddo
+!$acc end parallel
          endif
-         call opadd2_acc (TB1,TB2,TB3,TA1,TA2,TA3)
+c        INLINED:
+c        call opadd2_acc(TB1,TB2,TB3,TA1,TA2,TA3)
+c         =
+c          CALL ADD2(TB1,TA1,NTOT1)
+c          CALL ADD2(TB2,TA2,NTOT1)
+c          IF(NDIM.EQ.3)CALL ADD2(TB3,TA3,NTOT1)
+!$acc parallel
+         do e = 1, nelv
+         do k = 1, lz1
+         do j = 1, ly1
+         do i = 1, lx1
+            tb1(i,j,k,e) = tb1(i,j,k,e) + ta1(i,j,k,e)
+            tb2(i,j,k,e) = tb2(i,j,k,e) + ta2(i,j,k,e)
+            tb3(i,j,k,e) = tb3(i,j,k,e) + ta1(i,j,k,e)
+         enddo
+         enddo
+         enddo
+         enddo
+!$acc end parallel
       enddo
-c!$acc end data
 
-      call opadd2col_acc (BFX,BFY,BFZ,TB1,TB2,TB3,h2)
+c     INLINED:
+c     call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)
+!$acc update device(bfx,bfy,bfz)
+!$acc parallel
+      do e = 1, nelv
+      do k = 1, lz1
+      do j = 1, ly1
+      do i = 1, lx1
+         bfx(i,j,k,e)=bfx(i,j,k,e)+tb1(i,j,k,e)*h2(i,j,k,e)
+         bfy(i,j,k,e)=bfy(i,j,k,e)+tb2(i,j,k,e)*h2(i,j,k,e)
+         bfz(i,j,k,e)=bfz(i,j,k,e)+tb3(i,j,k,e)*h2(i,j,k,e)
+      enddo
+      enddo
+      enddo
+      enddo
+!$acc end parallel
+!$acc update host (bfx,bfy,bfz)
+!$acc exit data
 
       return
       end
@@ -852,29 +951,24 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine opcolv3c_acc(a1,a2,a3,b1,b2,b3,c,d)
+c      subroutine opcolv3c_acc(a1,a2,a3,b1,b2,b3,c,d)
 c-----------------------------------------------------------------------
-      include 'SIZE'
-      real a1(lx1*ly1*lz1*lelt),
-     $     a2(lx1*ly1*lz1*lelt),
-     $     a3(lx1*ly1*lz1*lelt),
-     $     b1(lx1*ly1*lz1*lelt),
-     $     b2(lx1*ly1*lz1*lelt),
-     $     b3(lx1*ly1*lz1*lelt),
-     $     c (lx1*ly1*lz1*lelt)
-
-      ntot1= lx1*ly1*lz1*lelt
-
-!$acc parallel loop present(a1,a2,a3,b1,b2,b3,c)
-      do i=1,ntot1
-         a1(i)=b1(i)*c(i)*d
-         a2(i)=b2(i)*c(i)*d
-         a3(i)=b3(i)*c(i)*d
-      enddo
-!$acc end parallel 
-
-      return
-      end
+c      include 'SIZE'
+c      parameter (n = lx1*ly1*lz1*lelt)
+c      real a1(n),a2(n),a3(n)
+c      real b1(n),b2(n),b3(n)
+c      real c (n)
+c
+c!$acc parallel loop present(a1,a2,a3,b1,b2,b3,c)
+c      do i=1,n
+c         a1(i)=b1(i)*c(i)*d
+c         a2(i)=b2(i)*c(i)*d
+c         a3(i)=b3(i)*c(i)*d
+c      enddo
+c!$acc end parallel 
+c
+c      return
+c      end
 c-----------------------------------------------------------------------
       subroutine opadd2_acc (a1,a2,a3,b1,b2,b3)
       include 'SIZE'

@@ -401,12 +401,10 @@ c
       call chck('abb')
       call makeuf_acc    ! paul and som
       call chck('bbb')
-      !call advab_acc
       call advab_acc
       call chck('cbb')
       call makeabf_acc
       call chck('dbb')
-!$ACC UPDATE HOST (bfx,bfy,bfz)
       call makebdf_acc
       call chck('ebb')
 
@@ -878,7 +876,6 @@ c          IF(NDIM.EQ.3)CALL ADD2(TB3,TA3,NTOT1)
 
 c     INLINED:
 c     call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)
-!$acc update device(bfx,bfy,bfz)
 !$acc parallel
       do e = 1, nelv
       do k = 1, lz1
@@ -892,7 +889,6 @@ c     call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)
       enddo
       enddo
 !$acc end parallel
-!$acc update host (bfx,bfy,bfz)
 !$acc exit data
 
       return

@@ -405,10 +405,9 @@ c
       call advab_acc
       call chck('cbb')
       call makeabf_acc
-!$ACC UPDATE HOST (bfx,bfy,bfz)
       call chck('dbb')
-      !call makebdf_acc
-      call makebdf
+!$ACC UPDATE HOST (bfx,bfy,bfz)
+      call makebdf_acc
       call chck('ebb')
 
       return
@@ -758,20 +757,23 @@ C     Add contributions to F from lagged BD terms.
       include 'INPUT'
       include 'TSTEP'
 
-      COMMON /SCRNS/ TA1(LX1,LY1,LZ1,LELV)
-     $ ,             TA2(LX1,LY1,LZ1,LELV)
-     $ ,             TA3(LX1,LY1,LZ1,LELV)
-     $ ,             TB1(LX1,LY1,LZ1,LELV)
-     $ ,             TB2(LX1,LY1,LZ1,LELV)
-     $ ,             TB3(LX1,LY1,LZ1,LELV)
-     $ ,             H2 (LX1,LY1,LZ1,LELV)
+      real TA1(LX1*LY1*LZ1*LELV)
+     $ ,   TA2(LX1*LY1*LZ1*LELV)
+     $ ,   TA3(LX1*LY1*LZ1*LELV)
+     $ ,   TB1(LX1*LY1*LZ1*LELV)
+     $ ,   TB2(LX1*LY1*LZ1*LELV)
+     $ ,   TB3(LX1*LY1*LZ1*LELV)
+     $ ,   H2 (LX1*LY1*LZ1*LELV)
 
       ntot1 = nx1*ny1*nz1*nelv
       const = 1./DT
 
+!$acc update device(bfx,bfy,bfz)
+!$acc data copyin (vtrans,vx,vy,vz,vxlag,vylag,vzlag,bm1)
+!$acc&     copyin (ta1,ta2,ta3,tb1,tb2,tb3,h2)
+
       call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
 
-!$acc data create (tb1,tb2,tb3)
       CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
 
       do ilag=2,nbd
@@ -787,11 +789,11 @@ C     Add contributions to F from lagged BD terms.
      $                                VZLAG (1,1,1,1,ILAG-1),
      $                                BM1                   ,bd(ilag+1))
          endif
-         call opadd2_acc (TB1,TB2,TB3,TA1,TA2,TA3)
+         call opadd2_acc(TB1,TB2,TB3,TA1,TA2,TA3)
       enddo
-      call opadd2col_acc (BFX,BFY,BFZ,TB1,TB2,TB3,h2)
-
+      call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)
 !$acc end data
+!$acc update host (bfx,bfy,bfz)
 
       return
       end
@@ -852,14 +854,13 @@ c-----------------------------------------------------------------------
       subroutine opcolv3c_acc(a1,a2,a3,b1,b2,b3,c,d)
 c-----------------------------------------------------------------------
       include 'SIZE'
+      parameter (n = lx1*ly1*lz1*lelv)
       real a1(n),a2(n),a3(n)
       real b1(n),b2(n),b3(n)
       real c (n)
 
-      ntot1= nx1*ny1*nz1*nelv
-
 !$acc parallel loop present(a1,a2,a3,b1,b2,b3,c)
-      do i=1,ntot1
+      do i=1,n
          a1(i)=b1(i)*c(i)*d
          a2(i)=b2(i)*c(i)*d
          a3(i)=b3(i)*c(i)*d

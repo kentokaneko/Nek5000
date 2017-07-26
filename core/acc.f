@@ -25,10 +25,11 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (abx1,aby1,abz1,abx2,aby2,abz2)
 !$acc   enter data copyin (ab)
 !$acc   enter data copyin (bfx,bfy,bfz)
-!$acc   enter data copyin (vx,vy,vz)
+!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e)
 !$acc   enter data copyin (vtrans)
 !$acc   enter data copyin (vxlag,vylag,vzlag)
 !$acc   enter data copyin (bd)
+!$acc   enter data copyin (qtl,usrdiv)
 
 c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)

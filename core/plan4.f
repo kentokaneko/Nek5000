@@ -35,6 +35,8 @@ C
       REAL DVC (LX1,LY1,LZ1,LELV), DFC(LX1,LY1,LZ1,LELV)
       REAL DIV1, DIV2, DIF1, DIF2, QTL1, QTL2
 
+      INTEGER e
+
       if (icalld.eq.0) tpres=0.0
       icalld=icalld+1
       npres=icalld
@@ -49,20 +51,21 @@ C
          call plan4_acc_data_copyin()
          call makef_acc
 !$acc update host(bfx,bfy,bfz)
-         call sumab(vx_e,vx,vxlag,ntot1,ab,nab)
-         call sumab(vy_e,vy,vylag,ntot1,ab,nab)
-         if (if3d) call sumab(vz_e,vz,vzlag,ntot1,ab,nab)
+
+         call sumab_acc(vx_e,vx,vxlag,ntot1,ab,nab)
+         call sumab_acc(vy_e,vy,vylag,ntot1,ab,nab)
+         call sumab_acc(vz_e,vz,vzlag,ntot1,ab,nab)
 
       else
-!$ACC  DATA COPY(qtl,usrdiv,vx,vy,vz,vxlag,vylag,vzlag)
          ! add user defined divergence to qtl 
          call add2_acc (qtl,usrdiv,ntot1)
 
          call lagvel_acc
-!$ACC END DATA
 
          ! mask Dirichlet boundaries
+!$acc update host(vx,vy,vz)
          call bcdirvc  (vx,vy,vz,v1mask,v2mask,v3mask) 
+!$acc update device(vx,vy,vz)
 
 C        first, compute pressure
 
@@ -742,3 +745,31 @@ c
 
       return
       end
+c-----------------------------------------------------------------------
+      subroutine sumab_acc(v,vv,vvlag,ntot,ab_,nab_)
+c
+c     sum up AB/BDF contributions 
+c
+      include 'SIZE'
+
+      real v(lx1*ly1*lz1*lelv)
+      real vv(lx1*ly1*lz1*lelv)
+      real vvlag(lx1*ly1*lz1*lelv,2)
+      real ab_(10)
+
+      ab0 = ab_(1)
+      ab1 = ab_(2)
+      ab2 = ab_(3)
+
+c     INLINED:
+c     call add3s2_acc(v,vv,vvlag(1,1),ab0,ab1,ab2,ntot)
+c     call add2s2_acc(v,vvlag(1,2),ab2,ntot)
+!$acc parallel present(v,vv,vvlag)
+      do i=1,ntot
+         v(i) = ab0*vv(i) + ab1*vvlag(i,1) + ab2*vvlag(i,2)
+      enddo
+!$acc end parallel
+
+      return
+      end
+c-----------------------------------------------------------------------

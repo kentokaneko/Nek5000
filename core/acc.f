@@ -28,6 +28,7 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (vx,vy,vz)
 !$acc   enter data copyin (vtrans)
 !$acc   enter data copyin (vxlag,vylag,vzlag)
+!$acc   enter data copyin (bd)
 
 c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)
@@ -767,8 +768,7 @@ C     Add contributions to F from lagged BD terms.
 
       NTOT1 = NX1*NY1*NZ1*NELV
       const = 1./DT
-!$acc enter data copyin(vtrans,vx,vy,vz,vxlag,vylag,vzlag,bd)
-!$acc& create(ta1,ta2,ta3,tb1,tb2,tb3,h2)
+!$acc enter data create(ta1,ta2,ta3,tb1,tb2,tb3,h2)
 
 c     INLINED:
 c     call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)

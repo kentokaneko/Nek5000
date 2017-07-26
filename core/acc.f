@@ -758,43 +758,133 @@ C     Add contributions to F from lagged BD terms.
       include 'INPUT'
       include 'TSTEP'
 
-      real TA1(LX1*LY1*LZ1*LELT)
-     $ ,             TA2(LX1*LY1*LZ1*LELT)
-     $ ,             TA3(LX1*LY1*LZ1*LELT)
-     $ ,             TB1(LX1*LY1*LZ1*LELT)
-     $ ,             TB2(LX1*LY1*LZ1*LELT)
-     $ ,             TB3(LX1*LY1*LZ1*LELT)
-     $ ,             H2 (LX1*LY1*LZ1*LELT)
+      integer e
 
-      ntot1 = lx1*ly1*lz1*lelt
+      real TA1(LX1,LY1,LZ1,LELV)
+     $ ,   TA2(LX1,LY1,LZ1,LELV)
+     $ ,   TA3(LX1,LY1,LZ1,LELV)
+     $ ,   TB1(LX1,LY1,LZ1,LELV)
+     $ ,   TB2(LX1,LY1,LZ1,LELV)
+     $ ,   TB3(LX1,LY1,LZ1,LELV)
+     $ ,   H2 (LX1,LY1,LZ1,LELV)
+
+      NTOT1 = NX1*NY1*NZ1*NELV
       const = 1./DT
 
-!$acc update device(bfx,bfy,bfz)
-!$acc data copyin (vtrans,vx,vy,vz,vxlag,vylag,vzlag,bm1)
-!$acc&     copyin (ta1,ta2,ta3,tb1,tb2,tb3,h2)
+c!$acc update device(bfx,bfy,bfz)
+c!$acc data copyin (vtrans,vx,vy,vz,vxlag,vylag,vzlag,bm1)
+c!$acc&     copyin (ta1,ta2,ta3,tb1,tb2,tb3,h2)
 
-      call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
+c     INLINED:
+c     call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
+      do e = 1, lelv
+      do k = 1, lz1
+      do j = 1, ly1
+      do i = 1, lx1
+         h2(i,j,k,e)=vtrans(i,j,k,e,ifield)*const
+      enddo
+      enddo
+      enddo
+      enddo
 
-      CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
+c     INLINED:
+c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
+      do e = 1, lelv
+      do k = 1, lz1
+      do j = 1, ly1
+      do i = 1, lx1
+         tb1(i,j,k,e)=vx(i,j,k,e)*bm1(i,j,k,e)*bd(2)
+         tb2(i,j,k,e)=vy(i,j,k,e)*bm1(i,j,k,e)*bd(2)
+         tb3(i,j,k,e)=vz(i,j,k,e)*bm1(i,j,k,e)*bd(2)
+      enddo
+      enddo
+      enddo
+      enddo
 
       do ilag=2,nbd
 
+c        INLINED:
          if (ifgeom) then
-            CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
-     $                                VYLAG (1,1,1,1,ILAG-1),
-     $                                VZLAG (1,1,1,1,ILAG-1),
-     $                                BM1LAG(1,1,1,1,ILAG-1),bd(ilag+1))
+c           CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
+c    $                                VYLAG (1,1,1,1,ILAG-1),
+c    $                                VZLAG (1,1,1,1,ILAG-1),
+c    $                                BM1LAG(1,1,1,1,ILAG-1),bd(ilag+1))
+            do e = 1, lelv
+            do k = 1, lz1
+            do j = 1, ly1
+            do i = 1, lx1
+               ta1(i,j,k,e) = vxlag(i,j,k,e,ilag-1)  * 
+     $                        bm1lag(i,j,k,e,ilag-1) *
+     $                        bd(ilag+1)
+               ta2(i,j,k,e) = vylag(i,j,k,e,ilag-1)  * 
+     $                        bm1lag(i,j,k,e,ilag-1) *
+     $                        bd(ilag+1)
+               ta3(i,j,k,e) = vzlag(i,j,k,e,ilag-1)  * 
+     $                        bm1lag(i,j,k,e,ilag-1) *
+     $                        bd(ilag+1)
+            enddo
+            enddo
+            enddo
+            enddo
          else
-            CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
-     $                                VYLAG (1,1,1,1,ILAG-1),
-     $                                VZLAG (1,1,1,1,ILAG-1),
-     $                                BM1                   ,bd(ilag+1))
+c           INLINED:
+c           CALL opcolv3c_acc(TA1,TA2,TA3,VXLAG (1,1,1,1,ILAG-1),
+c    $                                VYLAG (1,1,1,1,ILAG-1),
+c    $                                VZLAG (1,1,1,1,ILAG-1),
+c    $                                BM1                   ,bd(ilag+1))
+            do e = 1, lelv
+            do k = 1, lz1
+            do j = 1, ly1
+            do i = 1, lx1
+               ta1(i,j,k,e) = vxlag(i,j,k,e,ilag-1)  * 
+     $                        bm1(i,j,k,ilag-1+e) *
+     $                        bd(ilag+1)
+               ta2(i,j,k,e) = vylag(i,j,k,e,ilag-1)  * 
+     $                        bm1(i,j,k,ilag-1+e) *
+     $                        bd(ilag+1)
+               ta3(i,j,k,e) = vzlag(i,j,k,e,ilag-1)  * 
+     $                        bm1(i,j,k,ilag-1+e) *
+     $                        bd(ilag+1)
+            enddo
+            enddo
+            enddo
+            enddo
          endif
-         call opadd2_acc(TB1,TB2,TB3,TA1,TA2,TA3)
+c        INLINED:
+c        call opadd2_acc(TB1,TB2,TB3,TA1,TA2,TA3)
+c         =
+c          CALL ADD2(TB1,TA1,NTOT1)
+c          CALL ADD2(TB2,TA2,NTOT1)
+c          IF(NDIM.EQ.3)CALL ADD2(TB3,TA3,NTOT1)
+         do e = 1, lelv
+         do k = 1, lz1
+         do j = 1, ly1
+         do i = 1, lx1
+            tb1(i,j,k,e) = tb1(i,j,k,e) + ta1(i,j,k,e)
+            tb2(i,j,k,e) = tb2(i,j,k,e) + ta2(i,j,k,e)
+            tb3(i,j,k,e) = tb3(i,j,k,e) + ta1(i,j,k,e)
+         enddo
+         enddo
+         enddo
+         enddo
       enddo
-      call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)
-!$acc end data
-!$acc update host (bfx,bfy,bfz)
+
+c     INLINED:
+c     call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)
+      do e = 1, lelv
+      do k = 1, lz1
+      do j = 1, ly1
+      do i = 1, lx1
+         bfx(i,j,k,e)=bfx(i,j,k,e)+tb1(i,j,k,e)*h2(i,j,k,e)
+         bfy(i,j,k,e)=bfy(i,j,k,e)+tb2(i,j,k,e)*h2(i,j,k,e)
+         bfz(i,j,k,e)=bfz(i,j,k,e)+tb3(i,j,k,e)*h2(i,j,k,e)
+      enddo
+      enddo
+      enddo
+      enddo
+
+c!$acc end data
+c!$acc update host (bfx,bfy,bfz)
 
       return
       end

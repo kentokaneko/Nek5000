@@ -87,6 +87,8 @@ C
          call chk2('s8:',vy_e)
          call chk2('s9:',vz_e)
 
+!$acc update host(vx_e,vy_e,vz_e)
+
 C        first, compute pressure
 
          if (icalld.eq.0) tpres=0.0
@@ -94,20 +96,22 @@ C        first, compute pressure
          npres=icalld
          etime1=dnekclock()
 
-         call chk3('tx:',respr)
-!$ACC DATA COPY(h1,h2,respr) 
-!$ACC UPDATE DEVICE(h1,h2,respr,vtrans)
-         call chk2('t0:',respr)
-         call crespsp_acc  (respr)
-         call chk2('t1:',respr)
-         call chk2('t2:',h1)
-         call chk2('t3:',h2)
+ccc!$ACC DATA COPY(h1,h2,respr) 
+ccc!$ACC UPDATE DEVICE(h1,h2,respr,vtrans)
+         call chk3('t0:',respr)
+c        call crespsp_acc  (respr)
+         call crespsp(respr)
+         call chk3('t1:',respr)
+         call chk3('t2:',h1)
+         call chk3('t3:',h2)
+!$ACC DATA COPY(h1,h2,vtrans,respr)
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
          call ctolspl_acc(tolspl,respr)
-         call chk2('t6:',respr)
-         call chk2('t7:',h1)
-         call chk2('t8:',h2)
+!$ACC END DATA
+         call chk3('t6:',respr)
+         call chk3('t7:',h1)
+         call chk3('t8:',h2)
 
 c        call hsolve('PRES',dpr,respr,h1,h2 
 c    $                        ,pmask,vmult
@@ -125,8 +129,8 @@ c     $      nmxh,1)
          call chk2('u2:',pr)
          call ortho_acc(pr)
          call chk2('u3:',pr)
-!$ACC UPDATE HOST(pr,h1,h2)
-!$ACC END DATA 
+ccc!$ACC UPDATE HOST(pr,h1,h2)
+ccc!$ACC END DATA 
          call chk3('u4:',pr)
          call chk3('u4:',h1)
          call chk3('u4:',h2)

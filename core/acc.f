@@ -1037,8 +1037,8 @@ c      implicit none
       nxyz = lx1*ly1*lz1
       nelt = lelt
 
-cc!$ACC DATA PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t,w1,w2,w3)
-cc!$ACC&     PRESENT(w3m1,rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
+!$ACC DATA PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t,w1,w2,w3)
+!$ACC& PRESENT(jacmi,rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
 
 
 !$ACC PARALLEL LOOP COLLAPSE(4) GANG WORKER VECTOR
@@ -1054,28 +1054,28 @@ cc!$ACC&     PRESENT(w3m1,rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
      $                    + u3t(i,j,k,e)*tym1(i,j,k,e)
      $                    - u2r(i,j,k,e)*rzm1(i,j,k,e)
      $                    - u2s(i,j,k,e)*szm1(i,j,k,e)
-     $                    - u2t(i,j,k,e)*tzm1(i,j,k,e))*w3m1(i,j,k)
+     $                    - u2t(i,j,k,e)*tzm1(i,j,k,e))*jacmi(l,e)
 
                      w2(i,j,k,e)= (u1r(i,j,k,e)*rzm1(i,j,k,e)
      $                    + u1s(i,j,k,e)*szm1(i,j,k,e)
      $                    + u1t(i,j,k,e)*tzm1(i,j,k,e)
      $                    - u3r(i,j,k,e)*rxm1(i,j,k,e)
      $                    - u3s(i,j,k,e)*sxm1(i,j,k,e)
-     $                    - u3t(i,j,k,e)*txm1(i,j,k,e))*w3m1(i,j,k)
+     $                    - u3t(i,j,k,e)*txm1(i,j,k,e))*jacmi(l,e)
 
                      w3(i,j,k,e)= (u2r(i,j,k,e)*rxm1(i,j,k,e)
      $                    + u2s(i,j,k,e)*sxm1(i,j,k,e)
      $                    + u2t(i,j,k,e)*txm1(i,j,k,e)
      $                    - u1r(i,j,k,e)*rym1(i,j,k,e)
      $                    - u1s(i,j,k,e)*sym1(i,j,k,e)
-     $                    - u1t(i,j,k,e)*tym1(i,j,k,e))*w3m1(i,j,k)
+     $                    - u1t(i,j,k,e)*tym1(i,j,k,e))*jacmi(l,e)
                   enddo
                enddo
             enddo
          enddo
 !$ACC END PARALLEL LOOP
 
-cc!$ACC END DATA
+!$ACC END DATA
 
 c         write(6,*) iter, ' iter'
 
@@ -1189,17 +1189,28 @@ c
       real u3s(lx1,ly1,lz1,lelt)
       real u3t(lx1,ly1,lz1,lelt)
 
-      real w1(1),w2(1),w3(1),u1(1),u2(1),u3(1)
+      real w1(lx1*ly1*lz1*lelt),
+     $     w2(lx1*ly1*lz1*lelt),
+     $     w3(lx1*ly1*lz1*lelt),
+     $     u1(lx1*ly1*lz1*lelt),
+     $     u2(lx1*ly1*lz1*lelt),
+     $     u3(lx1*ly1*lz1*lelt)
 c
       ntot  = nx1*ny1*nz1*nelv
       nxyz  = nx1*ny1*nz1
 
 !$ACC DATA CREATE(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
+!$ACC& PRESENT(dxm1,w1,w2,w3,u1,u2,u3)
+
 
       call global_curl_grad3_acc(u1r,u1s,u1t,
      $   u2r,u2s,u2t,u3r,u3s,u3t,u1,u2,u3,dxm1)
 
       call curl_acc(w1,w2,w3,u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
+
+      call chk2('w1:',w1)
+      call chk2('w2:',w2)
+      call chk2('w3:',w3)
 
 !$ACC END DATA
 

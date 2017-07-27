@@ -95,7 +95,7 @@ C        first, compute pressure
          etime1=dnekclock()
 
          call chk3('tx:',respr)
-!$ACC DATA COPYIN(h1,h2,respr) CREATE(dpr)
+!$ACC DATA COPY(h1,h2,respr) 
 !$ACC UPDATE DEVICE(h1,h2,respr,vtrans)
          call chk2('t0:',respr)
          call crespsp_acc  (respr)

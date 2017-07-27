@@ -52,20 +52,40 @@ C
          call makef_acc
 !$acc update host(bfx,bfy,bfz)
 
-         call sumab_acc(vx_e,vx,vxlag,ntot1,ab,nab)
-         call sumab_acc(vy_e,vy,vylag,ntot1,ab,nab)
-         call sumab_acc(vz_e,vz,vzlag,ntot1,ab,nab)
+         call chk2('r1:',vx_e)
+         call chk2('r2:',vy_e)
+         call chk2('r3:',vz_e)
+
+         call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
+         call sumab_acc(vy_e,vy,vylag,n,ab,nab)
+         call sumab_acc(vz_e,vz,vzlag,n,ab,nab)
+
+         call chk2('r4:',vx_e)
+         call chk2('r5:',vy_e)
+         call chk2('r6:',vz_e)
 
       else
          ! add user defined divergence to qtl 
-         call add2_acc (qtl,usrdiv,ntot1)
+         call add2_acc (qtl,usrdiv,n)
+
+         call chk2('s1:',vx_e)
+         call chk2('s2:',vy_e)
+         call chk2('s3:',vz_e)
 
          call lagvel_acc
 
+         call chk2('s4:',vx_e)
+         call chk2('s5:',vy_e)
+         call chk2('s6:',vz_e)
+
          ! mask Dirichlet boundaries
-!$acc update host(vx,vy,vz)
+!$acc update host(vx,vy,vz,v1mask,v2mask,v3mask)
          call bcdirvc  (vx,vy,vz,v1mask,v2mask,v3mask) 
 !$acc update device(vx,vy,vz)
+
+         call chk2('s7:',vx_e)
+         call chk2('s8:',vy_e)
+         call chk2('s9:',vz_e)
 
 C        first, compute pressure
 
@@ -74,24 +94,42 @@ C        first, compute pressure
          npres=icalld
          etime1=dnekclock()
 
-!$ACC UPDATE DEVICE(vtrans)
-!$ACC DATA CREATE(h1,h2,respr) 
+         call chk3('tx:',respr)
+!$ACC DATA COPYIN(h1,h2,respr) CREATE(dpr)
+!$ACC UPDATE DEVICE(h1,h2,respr,vtrans)
+         call chk2('t0:',respr)
          call crespsp_acc  (respr)
-         call invers2_acc (h1,vtrans,ntot1)
-         call rzero_acc   (h2,ntot1)
+         call chk2('t1:',respr)
+         call chk2('t2:',h1)
+         call chk2('t3:',h2)
+         call invers2_acc (h1,vtrans,n)
+         call rzero_acc   (h2,n)
          call ctolspl_acc(tolspl,respr)
-!$ACC END DATA 
+         call chk2('t6:',respr)
+         call chk2('t7:',h1)
+         call chk2('t8:',h2)
 
-         napproxp(1) = laxtp
-         call hsolve('PRES',dpr,respr,h1,h2 
-     $                        ,pmask,vmult
-     $                        ,imesh,tolspl,nmxh,1
-     $                        ,approxp,napproxp,binvm1)
- 
-!$ACC  DATA COPY(pr,dpr)
-         call add2_acc (pr,dpr,ntot1)
+c        call hsolve('PRES',dpr,respr,h1,h2 
+c    $                        ,pmask,vmult
+c    $                        ,imesh,tolspl,nmxh,1
+c    $                        ,approxp,napproxp,binvm1)
+c         call hmholtz('PRES',dpr,respr,h1,h2,pmask,vmult,imesh,tolspl,
+c     $      nmxh,1)
+
+         call dssum     (respr,nx1,ny1,nz1)
+         call col2_acc  (respr,pmask,n)
+         call hmh_gmres (respr,h1,h2,vmult,nmxh)
+
+         call chk2('u1:',respr)
+         call add2_acc (pr,respr,n)
+         call chk2('u2:',pr)
          call ortho_acc(pr)
+         call chk2('u3:',pr)
+!$ACC UPDATE HOST(pr,h1,h2)
 !$ACC END DATA 
+         call chk3('u4:',pr)
+         call chk3('u4:',h1)
+         call chk3('u4:',h2)
 
          tpres=tpres+(dnekclock()-etime1)
 

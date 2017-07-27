@@ -360,8 +360,6 @@ c     res, h1, h2, and wt, since they are local variables.
 
       call hmh_gmres_acc_data_copyin()
 
-!$ACC ENTER DATA COPYIN(res,h1,h2)
-
       acctime1 = dnekclock()
 
 #ifdef _OPENACC
@@ -635,7 +633,6 @@ c     since ortho_acc() hasn't been implemented for 2D test cases.
 
       acctime1 = dnekclock()-acctime1
 
-!$ACC EXIT DATA COPYOUT(h1,h2,res)
 
       etime1 = dnekclock()-etime1
       if (nio.eq.0) write(6,9999) istep,iter,divex,div0,tolpss,etime_p,

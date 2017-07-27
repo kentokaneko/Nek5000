@@ -32,9 +32,12 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (pr,prlag,qtl,usrdiv)
 !$acc   enter data copyin (vtrans,vdiff)
 
+!$acc   enter data create (ibc_acc)
+
 c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)
 c!$acc   enter data copyin (bfx,bfy,bfz,bq,t,pr,prlag,qtl,usrdiv)
+
 
       endif
 
@@ -66,7 +69,7 @@ c-----------------------------------------------------------------------
      $             , w2   (lx1,ly1,lz1,lelt)
 
 !$ACC ENTER DATA COPYIN(work,work2)
-!$ACC ENTER DATA COPYIN(mg_mask,mg_imask,pmask)
+!$ACC ENTER DATA COPYIN(mg_mask,mg_imask)
 !$ACC ENTER DATA COPYIN(mg_jht,mg_jh,mg_rstr_wt,mg_schwarz_wt)
 !$ACC ENTER DATA COPYIN(mg_work,mg_fast_s,mg_fast_d)
 !$ACC ENTER DATA COPYIN(h_gmres,w_gmres,v_gmres,z_gmres)
@@ -1035,7 +1038,7 @@ c      implicit none
       nelt = lelt
 
 cc!$ACC DATA PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t,w1,w2,w3)
-cc!$ACC&     PRESENT(jacmi,rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
+cc!$ACC&     PRESENT(w3m1,rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
 
 
 !$ACC PARALLEL LOOP COLLAPSE(4) GANG WORKER VECTOR
@@ -1051,21 +1054,21 @@ cc!$ACC&     PRESENT(jacmi,rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
      $                    + u3t(i,j,k,e)*tym1(i,j,k,e)
      $                    - u2r(i,j,k,e)*rzm1(i,j,k,e)
      $                    - u2s(i,j,k,e)*szm1(i,j,k,e)
-     $                    - u2t(i,j,k,e)*tzm1(i,j,k,e))*jacmi(l,e)
+     $                    - u2t(i,j,k,e)*tzm1(i,j,k,e))*w3m1(i,j,k)
 
                      w2(i,j,k,e)= (u1r(i,j,k,e)*rzm1(i,j,k,e)
      $                    + u1s(i,j,k,e)*szm1(i,j,k,e)
      $                    + u1t(i,j,k,e)*tzm1(i,j,k,e)
      $                    - u3r(i,j,k,e)*rxm1(i,j,k,e)
      $                    - u3s(i,j,k,e)*sxm1(i,j,k,e)
-     $                    - u3t(i,j,k,e)*txm1(i,j,k,e))*jacmi(l,e)
+     $                    - u3t(i,j,k,e)*txm1(i,j,k,e))*w3m1(i,j,k)
 
                      w3(i,j,k,e)= (u2r(i,j,k,e)*rxm1(i,j,k,e)
      $                    + u2s(i,j,k,e)*sxm1(i,j,k,e)
      $                    + u2t(i,j,k,e)*txm1(i,j,k,e)
      $                    - u1r(i,j,k,e)*rym1(i,j,k,e)
      $                    - u1s(i,j,k,e)*sym1(i,j,k,e)
-     $                    - u1t(i,j,k,e)*tym1(i,j,k,e))*jacmi(l,e)
+     $                    - u1t(i,j,k,e)*tym1(i,j,k,e))*w3m1(i,j,k)
                   enddo
                enddo
             enddo
@@ -1231,13 +1234,29 @@ c
       
       nxyz1  = nx1*ny1*nz1
       ntot1  = nxyz1*nelv
+      ntot2  = LX1*LY1*LZ1*LELV
       nfaces = 2*ndim
 
       write(6,*) 'call opcurl'
 !$ACC ENTER DATA CREATE (ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
 c     -mu*curl(curl(v))
+      call chk2('b1:',vx_e)
+      call chk2('b2:',vy_e)
+      call chk2('b3:',vz_e)
       call op_curl_acc (ta1,ta2,ta3,vx_e,vy_e,vz_e)
+      call chk2('c1:',ta1)
+      call chk2('c2:',ta2)
+      call chk2('c3:',ta3)
+      ! call print_acc(ta1,ntot2,'c1: ',1)
+      ! call print_acc(ta2,ntot2,'c2: ',1)
+      ! call print_acc(ta3,ntot2,'c3: ',1)
       call op_curl_acc (wa1,wa2,wa3,ta1,ta2,ta3)
+      call chk2('c4:',wa1)
+      call chk2('c5:',wa2)
+      call chk2('c6:',wa3)
+      ! call print_acc(wa1,ntot2,'c4: ',1)
+      ! call print_acc(wa2,ntot2,'c5: ',1)
+      ! call print_acc(wa3,ntot2,'c6: ',1)
 
       call rzero_acc(ta1,ntot1)
       call rzero_acc(ta2,ntot1)
@@ -1245,47 +1264,42 @@ c     -mu*curl(curl(v))
       ! No support for lowmach
       !call wgradm1_acc (ta1,ta2,ta3,qtl,nelt)
       call opcolv_acc  (wa1,wa2,wa3,bm1)
+      call chk2('c7:',wa1)
+      call chk2('c8:',wa2)
+      call chk2('c9:',wa3)
 
       scale = -4./3. 
       call opadd2cm_acc(wa1,wa2,wa3,ta1,ta2,ta3,scale)
+      call chk2('d4:',wa1)
+      call chk2('d5:',wa2)
+      call chk2('d6:',wa3)
 
 c compute stress tensor for ifstrs formulation - variable viscosity Pn-Pn
       if (ifstrs) 
      $   call exitti('ifstrs not yet support on gpu$',nelv)
 
+!$acc update device (vdiff,vtrans)
       call invcol3_acc  (wa4,vdiff,vtrans,ntot1)
+      call chk2('d7:',wa4)
         
       call opcolv_acc   (wa1,wa2,wa3,wa4)
+      call chk2('e1:',wa1)
+      call chk2('e2:',wa2)
+      call chk2('e3:',wa3)
 
 c     add old pressure term because we solve for delta p 
 
-      call chck('a99')
-
-      call chk2('b91',ta1)
-      call chk2('b92',ta2)
-      call chk2('b93',ta3)
-
-      call chk2('c91',wa1)
-      call chk2('c92',wa2)
-      call chk2('c93',wa3)
-
-
       call invers2_acc (ta1,vtrans,ntot1)
-      call chck('c99')
+      call chk2('e4:',ta1)
+      call chk2('e5:',vtrans)
       call rzero_acc   (ta2,ntot1)
-      call chck('d99')
 
 !$ACC UPDATE HOST(pr)
       call bcdirsc (pr)
 !$ACC UPDATE DEVICE(pr)
-
-      call chck('e99')
-
-      call chck('f99')
+      call chk2('e6:',pr)
       call axhelm_acc  (respr,pr,ta1,ta2,1,1)
-      call chck('g99')
       call chsign_acc  (respr,ntot1)
-      call chck('h99')
 
 c     add explicit (NONLINEAR) terms 
       n = nx1*ny1*nz1*nelv
@@ -1462,6 +1476,19 @@ c-----------------------------------------------------------------------
       
       n=nx1*ny1*nz1*nelt
       amx=glamax_acc(a,n)
+      write(6,*) 'check2: ',s3,amx
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine chk3(s3,a)
+      include 'SIZE'
+      character*3 s3
+      parameter (lt=lx1*ly1*lz1*lelt)
+      real a(lt)
+      
+      n=nx1*ny1*nz1*nelt
+      amx=glamax(a,n)
       write(6,*) 'check2: ',s3,amx
 
       return

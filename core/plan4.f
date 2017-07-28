@@ -824,13 +824,14 @@ c-----------------------------------------------------------------------
       subroutine crespsp_face_update(respr,ta1,ta2,ta3,dtbd,w1,w2,w3)
 c
       include 'SIZE'
-      include 'INPUT'
+      include 'TOTAL'
 
       parameter(lz=lx1*ly1*lz1)
       real respr(lz,lelt),ta1(lz,lelt),ta2(lz,lelt),ta3(lz,lelt)
       real w1(lz),w2(lz),w3(lz)
 
       character*1 c1
+      character*3 cb
       integer e,f
 
       nfaces = 2*ndim

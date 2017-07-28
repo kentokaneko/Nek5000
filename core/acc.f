@@ -1402,69 +1402,8 @@ c     add explicit (NONLINEAR) terms
       dtbd = bd(1)/dt
 c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
 
-C     ADD SURFACE TERMS (now, to free up ta3)
-      call izero(ibc_acc,nfaces*nelv)
-      do e=1,nelv
-      do f=1,nfaces
-         cb = cbc(f,e,ifield)
-         c1 = cbc(f,e,ifield)
-         if (c1.eq.'v'.or.c1.eq.'V'.or.
-     $       cb.eq.'MV '.or.cb.eq.'mv ') ibc_acc(f,e)=1
-         if (cb.eq.'SYM')                ibc_acc(f,e)=2
-      enddo
-      enddo
-!$acc update device(ibc_acc)
+      call crespsp_face_update(respr,ta1,ta2,ta3,dtbd,w1,w2,w3)
 
-!$acc parallel loop collapse(2) gang
-!$acc&present(vx,vy,vz,ta1,ta2,ta3,unx,uny,unz,area,respr,cbc,bc)
-      do e=1,nelv
-      do f=1,nfaces
-         i0=1
-         j0=1
-         k0=1
-         i1=lx1
-         j1=ly1
-         k1=lz1
-         if (f.eq.1) j1=1
-         if (f.eq.2) i0=lx1
-         if (f.eq.3) j0=ly1
-         if (f.eq.4) i1=1
-         if (f.eq.5) k1=1
-         if (f.eq.6) k0=lz1
-
-         if (ibc_acc(f,e).eq.1) then
-            l=0
-!$acc       loop vector collapse(3)
-            do k=k0,k1
-            do j=j0,j1
-            do i=i0,i1
-               l=l+1
-               tmp    =(vx(i,j,k,e)*unx(l,1,f,e)
-     $                 +vy(i,j,k,e)*uny(l,1,f,e)
-     $                 +vz(i,j,k,e)*unz(l,1,f,e))*area(l,1,f,e)
-     $                 *dtdb
-               respr(i,j,k,e)=respr(i,j,k,e)-tmp
-            enddo
-            enddo
-            enddo
-         elseif (ibc_acc(f,e).eq.2) then
-            l=0
-!$acc       loop vector collapse(3)
-            do k=k0,k1
-            do j=j0,j1
-            do i=i0,i1
-               l=l+1
-               tmp    =(ta1(i,j,k,e)*unx(l,1,f,e)
-     $                 +ta2(i,j,k,e)*uny(l,1,f,e)
-     $                 +ta3(i,j,k,e)*unz(l,1,f,e))*area(l,1,f,e)
-               respr(i,j,k,e)=respr(i,j,k,e)-tmp
-            enddo
-            enddo
-            enddo
-         endif
-      enddo
-      enddo
-!$acc end parallel
       call chk2('fc1',respr)
       call chck('h89')
 

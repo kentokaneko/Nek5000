@@ -820,3 +820,59 @@ c     call add2s2_acc(v,vvlag(1,2),ab2,ntot)
 
       return
       end
+c-----------------------------------------------------------------------
+      subroutine crespsp_face_update(respr,ta1,ta2,ta3,dtbd,w1,w2,w3)
+c
+      include 'SIZE'
+      include 'INPUT'
+
+      parameter(lz=lx1*ly1*lz1)
+      real respr(lz,lelt),ta1(lz,lelt),ta2(lz,lelt),ta3(lz,lelt)
+      real w1(lz),w2(lz),w3(lz)
+
+      character*1 c1
+      integer e,f
+
+      nfaces = 2*ndim
+
+!$ACC UPDATE HOST(respr,ta1,ta2,ta3)
+
+      do e=1,nelv
+      do f=1,nfaces
+
+         call rzero  (w1,lz)
+         call rzero  (w2,lz)
+         if (ldim.eq.3) call rzero  (w3,lz)
+
+         cb = cbc(f,e,ifield)
+         c1 = cbc(f,e,ifield)
+
+         if (c1.eq.'V'.or.c1.eq.'v'.or.cb.eq.'MV '.or.cb.eq.'mv ') then
+            call faccl3(w1,vx(1,1,1,e),unx(1,1,f,e),f)
+            call faccl3(w2,vy(1,1,1,e),uny(1,1,f,e),f)
+            if (ldim.eq.3)
+     $      call faccl3(w3,vz(1,1,1,e),unz(1,1,f,e),f)
+         elseif (cb.eq.'SYM') then
+            call faccl3(w1,ta1(1,e),unx(1,1,f,e),f)
+            call faccl3(w2,ta2(1,e),uny(1,1,f,e),f)
+            if (ldim.eq.3)
+     $       call faccl3(w3,ta3(1,e),unz(1,1,f,e),f)
+         endif
+
+         call add2   (w1,w2,lz)
+         if (ldim.eq.3) call add2   (w1,w3,lz)
+
+         call faccl2 (w1,area(1,1,f,e),f)
+
+         if (c1.eq.'V'.or.c1.eq.'v'.or.cb.eq.'MV '.or.cb.eq.'mv ') 
+     $     call cmult(w1,dtbd,lz)
+         
+         call sub2 (respr(1,e),w1,lz)
+      enddo
+      enddo
+
+!$ACC UPDATE DEVICE(respr)
+
+      return
+      end
+c-----------------------------------------------------------------------

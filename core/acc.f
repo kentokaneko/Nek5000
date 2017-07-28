@@ -1228,26 +1228,26 @@ ccc!$ACC& PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
       call chk2('w2:',w2)
       call chk2('w3:',w3)
 
-!$ACC UPDATE HOST(w1,w2,w3)
+ccc!$ACC UPDATE HOST(w1,w2,w3)
 !$ACC END DATA
 
-      if (ifavg.and..not.ifcyclic) then
-         call chck('t03')
-
-         ifielt = ifield
-         ifield = 1
-
-
-         call opcolv(w1,w2,w3,bm1)
-         call opdssum(w1,w2,w3)
-         call opcolv(w1,w2,w3,binvm1)
-
-!$ACC UPDATE DEVICE(w1,w2,w3)
-
-
-         ifield = ifielt
-      endif
-
+ccc      if (ifavg.and..not.ifcyclic) then
+ccc         call chck('t03')
+ccc
+ccc         ifielt = ifield
+ccc         ifield = 1
+ccc
+ccc
+ccc         call opcolv(w1,w2,w3,bm1)
+ccc         call opdssum(w1,w2,w3)
+ccc         call opcolv(w1,w2,w3,binvm1)
+ccc
+ccc!$ACC UPDATE DEVICE(w1,w2,w3)
+ccc
+ccc
+ccc         ifield = ifielt
+ccc      endif
+ccc
 
       return
       end
@@ -1268,7 +1268,7 @@ c
      $ ,             wa1   (lx1*ly1*lz1*lelv)
      $ ,             wa2   (lx1*ly1*lz1*lelv)
      $ ,             wa3   (lx1*ly1*lz1*lelv)
-     $ ,             wa4   (lx1*ly1*lz1*lelv)
+     $ ,             wa4   (lx1*ly1*lz1*lelv*ldimt1)
       real           w1    (lx1,ly1,lz1)
      $ ,             w2    (lx1,ly1,lz1)
      $ ,             w3    (lx1,ly1,lz1)
@@ -1325,7 +1325,8 @@ c compute stress tensor for ifstrs formulation - variable viscosity Pn-Pn
      $   call exitti('ifstrs not yet support on gpu$',nelv)
 
 !$acc update device (vdiff,vtrans)
-      call invcol3_acc  (wa4,vdiff,vtrans,ntot1)
+      call invcol3_acc  (wa4,vdiff,vtrans,ldimt1*ntot1)
+c     call invcol3_acc  (wa4,vdiff,vtrans,ntot1)
       call chk2('d7:',wa4)
         
       call opcolv_acc   (wa1,wa2,wa3,wa4)

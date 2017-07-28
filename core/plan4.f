@@ -96,8 +96,7 @@ C        first, compute pressure
          npres=icalld
          etime1=dnekclock()
 
-         call chk3('t0:',respr)
-!$ACC DATA COPY(h1,h2,respr)
+!$ACC ENTER DATA COPYIN(h1,h2,respr)
          call crespsp_acc(respr)
          call chk2('t1:',respr)
          call chk2('t2:',h1)
@@ -105,10 +104,9 @@ C        first, compute pressure
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
          call ctolspl_acc(tolspl,respr)
-!$ACC END DATA
-         call chk3('t6:',respr)
-         call chk3('t7:',h1)
-         call chk3('t8:',h2)
+         call chk2('t6:',respr)
+         call chk2('t7:',h1)
+         call chk2('t8:',h2)
 
 c        call hsolve('PRES',dpr,respr,h1,h2 
 c    $                        ,pmask,vmult
@@ -117,8 +115,18 @@ c    $                        ,approxp,napproxp,binvm1)
 c         call hmholtz('PRES',dpr,respr,h1,h2,pmask,vmult,imesh,tolspl,
 c     $      nmxh,1)
 
+!$ACC UPDATE HOST(respr)
+!$ACC EXIT DATA
+
+         call chk3('t81',respr)
          call dssum     (respr,nx1,ny1,nz1)
+         call chk3('t9 ',respr)
+
+!$ACC ENTER DATA COPYIN(respr,pmask,h1,h2)
+
+         call chk2('t91',respr)
          call col2_acc  (respr,pmask,n)
+         call chk2('ta ',respr)
          call hmh_gmres (respr,h1,h2,vmult,nmxh)
 
          call chk2('u1:',respr)
@@ -127,7 +135,7 @@ c     $      nmxh,1)
          call ortho_acc(pr)
          call chk2('u3:',pr)
 ccc!$ACC UPDATE HOST(pr,h1,h2)
-ccc!$ACC END DATA 
+!$ACC EXIT DATA 
          call chk3('u4:',pr)
          call chk3('u4:',h1)
          call chk3('u4:',h2)

@@ -1552,7 +1552,9 @@ c-----------------------------------------------------------------------
       
       n=nx1*ny1*nz1*nelt
       amx=glamax_acc(a,n)
+      ams=glsum_acc(a,n)
       write(6,*) 'check2: ',s3,amx
+      write(6,*) 'check4: ',s3,ams
 
       return
       end
@@ -1565,7 +1567,9 @@ c-----------------------------------------------------------------------
       
       n=nx1*ny1*nz1*nelt
       amx=glamax(a,n)
-      write(6,*) 'check2: ',s3,amx
+      ams=glsum(a,n)
+      write(6,*) 'check3: ',s3,amx
+      write(6,*) 'check5: ',s3,ams
 
       return
       end

@@ -31,6 +31,7 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (bd)
 !$acc   enter data copyin (pr,prlag,qtl,usrdiv)
 !$acc   enter data copyin (vtrans,vdiff)
+!$acc   enter data copyin (param)
 
 !$acc   enter data create (ibc_acc)
 

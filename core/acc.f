@@ -1508,6 +1508,8 @@ C     ADD SURFACE TERMS (now, to free up ta3)
 C     Orthogonalize to (1,1,...,1)T for all-Dirichlet case
       call ortho_acc (respr)
 
+      call chk2('fd ',respr)
+
 !$acc exit data
 
       return

@@ -1400,7 +1400,7 @@ c     add explicit (NONLINEAR) terms
       call chk2('fb ',ta3)
 
       dtbd = bd(1)/dt
-c     call admcol3(respr,qtl,bm1,dtdb,ntot1)
+c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
 
 C     ADD SURFACE TERMS (now, to free up ta3)
       call izero(ibc_acc,nfaces*nelv)

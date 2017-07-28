@@ -1214,6 +1214,9 @@ c
 
 ccc!$ACC& PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
 
+      call chk2('u1:',u1)
+      call chk2('u2:',u2)
+      call chk2('u3:',u3)
       call global_curl_grad3_acc(u1r,u1s,u1t,
      $   u2r,u2s,u2t,u3r,u3s,u3t,u1,u2,u3,dxm1)
 
@@ -1225,7 +1228,26 @@ ccc!$ACC& PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
       call chk2('w2:',w2)
       call chk2('w3:',w3)
 
+!$ACC UPDATE HOST(w1,w2,w3)
 !$ACC END DATA
+
+      if (ifavg.and..not.ifcyclic) then
+         call chck('t03')
+
+         ifielt = ifield
+         ifield = 1
+
+
+         call opcolv(w1,w2,w3,bm1)
+         call opdssum(w1,w2,w3)
+         call opcolv(w1,w2,w3,binvm1)
+
+!$ACC UPDATE DEVICE(w1,w2,w3)
+
+
+         ifield = ifielt
+      endif
+
 
       return
       end

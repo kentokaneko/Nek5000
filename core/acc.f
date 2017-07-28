@@ -1012,12 +1012,13 @@ c-----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
-      subroutine curl_acc(w1,w2,w3,u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
+      subroutine curl_acc(u1r, u1s, u1t, u2r, u2s, u2t, u3r, u3s, u3t,
+     $                    rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1,
+     $                    w1,  w2,  w3,  jacmi)
 c-----------------------------------------------------------------------
 c      implicit none
 
       include 'SIZE'
-      include 'TOTAL'
 
       real u1r(lx1,ly1,lz1,lelt)
       real u1s(lx1,ly1,lz1,lelt)
@@ -1031,6 +1032,17 @@ c      implicit none
       real w1 (lx1,ly1,lz1,lelt)
       real w2 (lx1,ly1,lz1,lelt)
       real w3 (lx1,ly1,lz1,lelt)
+
+      real jacmi(lx1*ly1*lz1,lelt)
+      real rxm1(lx1,ly1,lz1,lelt)
+      real sxm1(lx1,ly1,lz1,lelt)
+      real txm1(lx1,ly1,lz1,lelt)
+      real rym1(lx1,ly1,lz1,lelt)
+      real sym1(lx1,ly1,lz1,lelt)
+      real tym1(lx1,ly1,lz1,lelt)
+      real rzm1(lx1,ly1,lz1,lelt)
+      real szm1(lx1,ly1,lz1,lelt)
+      real tzm1(lx1,ly1,lz1,lelt)
 
       integer i,j,k,l,e
 
@@ -1171,14 +1183,12 @@ c-----------------------------------------------------------------------
 
       return
       end
-c----------------------------------------------------------------------------------  
 c-----------------------------------------------------------------------
       subroutine op_curl_acc(w1,w2,w3,u1,u2,u3)
-c
+
       include 'SIZE'
       include 'TOTAL'
-c
-c
+
       real u1r(lx1,ly1,lz1,lelt)
       real u1s(lx1,ly1,lz1,lelt)
       real u1t(lx1,ly1,lz1,lelt)
@@ -1196,17 +1206,20 @@ c
      $     u2(lx1*ly1*lz1*lelt),
      $     u3(lx1*ly1*lz1*lelt)
 c
-      ntot  = nx1*ny1*nz1*nelv
-      nxyz  = nx1*ny1*nz1
 
-!$ACC DATA CREATE(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
-!$ACC& PRESENT(dxm1,w1,w2,w3,u1,u2,u3)
+!$ACC DATA PRESENT(w1,w2,w3,u1,u2,u3)
+!$ACC& PRESENT(jacmi,rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
+!$ACC& PRESENT(dxm1,dxtm1)
+!$ACC& CREATE(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
 
+ccc!$ACC& PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
 
       call global_curl_grad3_acc(u1r,u1s,u1t,
      $   u2r,u2s,u2t,u3r,u3s,u3t,u1,u2,u3,dxm1)
 
-      call curl_acc(w1,w2,w3,u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
+      call curl_acc (u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t,
+     $               rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1,
+     $               w1,w2,w3,jacmi)
 
       call chk2('w1:',w1)
       call chk2('w2:',w2)

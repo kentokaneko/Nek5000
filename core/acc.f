@@ -34,9 +34,9 @@ c-----------------------------------------------------------------------
 
 !$acc   enter data create (ibc_acc)
 
-c!$acc   enter data copyin (vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
-c!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e,vtrans,vdiff,vdiff_e)
-c!$acc   enter data copyin (bfx,bfy,bfz,bq,t,pr,prlag,qtl,usrdiv)
+c!$acc   enter data copyin (tlag,vgradt1,vgradt2)
+c!$acc   enter data copyin (vdiff_e)
+c!$acc   enter data copyin (bq,t,usrdiv)
 
 
       endif
@@ -1345,12 +1345,26 @@ c     add old pressure term because we solve for delta p
       call bcdirsc (pr)
 !$ACC UPDATE DEVICE(pr)
       call chk2('e6:',pr)
+      call chk2('e7:',respr)
       call axhelm_acc  (respr,pr,ta1,ta2,1,1)
+      call chk2('e8:',respr)
+      call chk2('e9:',ta1)
+      call chk2('ea:',ta2)
       call chsign_acc  (respr,ntot1)
+      call chk2('eb ',respr)
 
 c     add explicit (NONLINEAR) terms 
       n = nx1*ny1*nz1*nelv
-!$acc parallel loop present(ta1,ta2,ta3,bfx,bfy,bfz,vtrans,wa1,wa2,wa3)
+
+      call chk2('ec ',vtrans)
+      call chk2('ed ',bfx)
+      call chk2('ee ',bfy)
+      call chk2('ef ',bfz)
+      call chk2('f0 ',wa1)
+      call chk2('f1 ',wa2)
+      call chk2('f2 ',wa3)
+
+!$acc parallel loop present(ta1,ta2,ta3,wa1,wa2,wa3)
       do i=1,n
          ta1(i,1,1,1) = bfx(i,1,1,1)/vtrans(i,1,1,1,1)-wa1(i)
          ta2(i,1,1,1) = bfy(i,1,1,1)/vtrans(i,1,1,1,1)-wa2(i)
@@ -1358,11 +1372,19 @@ c     add explicit (NONLINEAR) terms
       enddo
 !$acc end parallel
 
+      call chk2('f3 ',ta1)
+      call chk2('f4 ',ta2)
+      call chk2('f5 ',ta3)
+
       write(6,*) 'call dssum',ifield
       call dssum (ta1,nx1,ny1,nz1)
       call dssum (ta2,nx1,ny1,nz1)
       call dssum (ta3,nx1,ny1,nz1)
       write(6,*) 'done dssum',ifield
+
+      call chk2('f6 ',ta1)
+      call chk2('f7 ',ta2)
+      call chk2('f8 ',ta3)
 
 !$acc parallel loop present(ta1,ta2,ta3,binvm1)
       do i=1,n
@@ -1373,6 +1395,9 @@ c     add explicit (NONLINEAR) terms
 !$acc end parallel
       call chck('h79')
 
+      call chk2('f9 ',ta1)
+      call chk2('fa ',ta2)
+      call chk2('fb ',ta3)
 
 C     ADD SURFACE TERMS (now, to free up ta3)
       call izero(ibc_acc,nfaces*nelv)
@@ -1414,7 +1439,6 @@ C     ADD SURFACE TERMS (now, to free up ta3)
                tmp    =(vx(i,j,k,e)*unx(l,1,f,e)
      $                 +vy(i,j,k,e)*uny(l,1,f,e)
      $                 +vz(i,j,k,e)*unz(l,1,f,e))*area(l,1,f,e)
-     $                 *dtdb
                respr(i,j,k,e)=respr(i,j,k,e)-tmp
             enddo
             enddo
@@ -1437,6 +1461,7 @@ C     ADD SURFACE TERMS (now, to free up ta3)
       enddo
       enddo
 !$acc end parallel
+      call chk2('fc1',respr)
       call chck('h89')
 
 !$acc parallel loop gang
@@ -1477,6 +1502,8 @@ C     ADD SURFACE TERMS (now, to free up ta3)
 
       enddo
 !$acc end parallel
+
+      call chk2('fc ',respr)
 
 C     Orthogonalize to (1,1,...,1)T for all-Dirichlet case
       call ortho_acc (respr)

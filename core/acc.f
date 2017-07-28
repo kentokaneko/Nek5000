@@ -1399,6 +1399,9 @@ c     add explicit (NONLINEAR) terms
       call chk2('fa ',ta2)
       call chk2('fb ',ta3)
 
+      dtbd = bd(1)/dt
+c     call admcol3(respr,qtl,bm1,dtdb,ntot1)
+
 C     ADD SURFACE TERMS (now, to free up ta3)
       call izero(ibc_acc,nfaces*nelv)
       do e=1,nelv
@@ -1439,6 +1442,7 @@ C     ADD SURFACE TERMS (now, to free up ta3)
                tmp    =(vx(i,j,k,e)*unx(l,1,f,e)
      $                 +vy(i,j,k,e)*uny(l,1,f,e)
      $                 +vz(i,j,k,e)*unz(l,1,f,e))*area(l,1,f,e)
+     $                 *dtdb
                respr(i,j,k,e)=respr(i,j,k,e)-tmp
             enddo
             enddo

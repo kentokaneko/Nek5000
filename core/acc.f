@@ -1499,8 +1499,8 @@ c-----------------------------------------------------------------------
       amx=glamax_acc(a,n)
       ams=glsum_acc(a,n)
 
-      write(6,*) 'c2max: ',s3,amx
-      write(6,*) 'c2sum: ',s3,ams
+      write(6,*) s3,   ' dev  max ',amx
+      write(6,*) '   ','      sum ',ams
 
       return
       end
@@ -1517,25 +1517,56 @@ c-----------------------------------------------------------------------
       amx=glamax(a,n)
       ams=glsum(a,n)
 
-      write(6,*) 'c3max: ',s3,amx
-      write(6,*) 'c3sum: ',s3,ams
+      write(6,*) s3,   ' host max ',amx
+      write(6,*) '   ','      sum ',ams
 
       return
       end
 c-----------------------------------------------------------------------
-      subroutine chkn(s4,a,n)
+      subroutine chk2n(s4,a,n)
       include 'SIZE'
       character*3 s4
 
       real a(n)
 
-      n=nx1*ny1*nz1*nelt
+      amx=glamax(a,n)
+      ams=glsum(a,n)
+
+      write(6,*) s4,     ' dev  max ',amx
+      write(6,*) '    ', '      sum ',ams
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine chk3n(s4,a,n)
+      include 'SIZE'
+      character*3 s4
+
+      real a(n)
 
       amx=glamax(a,n)
       ams=glsum(a,n)
 
-      write(6,*) 'cNmax: ',s4,amx
-      write(6,*) 'cNsum: ',s4,ams
+      write(6,*) s4,     ' host max ',amx
+      write(6,*) '    ', '      sum ',ams
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine chk4(s4,a,n1)
+      include 'SIZE'
+
+      real a(n1,n1,n1,nelv)
+      integer e
+
+      do e = 1,nelv
+         max = glamax_acc(a(1,1,1,e),n1**3)
+         if (e.eq.1) then
+            write (6,*) s4,    ' e=',e,' max=',max
+         else
+            write (6,*) '    ',' e=',e,' max=',max
+         endif
+      enddo
 
       return
       end

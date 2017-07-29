@@ -31,7 +31,7 @@ c-----------------------------------------------------------------------
 !$acc   enter data copyin (bd)
 !$acc   enter data copyin (pr,prlag,qtl,usrdiv)
 !$acc   enter data copyin (vtrans,vdiff)
-!$acc   enter data copyin (param)
+!$acc   enter data copyin (param,nelfld)
 
 !$acc   enter data create (ibc_acc)
 
@@ -70,7 +70,7 @@ c-----------------------------------------------------------------------
      $             , w2   (lx1,ly1,lz1,lelt)
 
 !$ACC ENTER DATA COPYIN(work,work2)
-!$ACC ENTER DATA COPYIN(mg_mask,mg_imask)
+!$ACC ENTER DATA COPYIN(mg_mask,mg_imask,pmask)
 !$ACC ENTER DATA COPYIN(mg_jht,mg_jh,mg_rstr_wt,mg_schwarz_wt)
 !$ACC ENTER DATA COPYIN(mg_work,mg_fast_s,mg_fast_d)
 !$ACC ENTER DATA COPYIN(h_gmres,w_gmres,v_gmres,z_gmres)

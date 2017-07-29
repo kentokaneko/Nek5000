@@ -47,6 +47,58 @@ c!$acc   enter data copyin (bq,t,usrdiv)
       return
       end
 c-----------------------------------------------------------------------
+c     subroutine hmh_gmres_acc_data_copyin()
+      subroutine hsmg_acc_data_copyin
+      include 'SIZE'
+      include 'HSMG'
+
+!$ACC ENTER DATA COPYIN(mg_nx)
+!$ACC ENTER DATA COPYIN(mg_ny,mg_nz)
+!$ACC ENTER DATA COPYIN(mg_nh,mg_nhz)
+!$ACC ENTER DATA COPYIN(mg_gsh_schwarz_handle)
+!$ACC ENTER DATA COPYIN(mg_gsh_handle)
+!$ACC ENTER DATA COPYIN(mg_rstr_wt_index)
+!$ACC ENTER DATA COPYIN(mg_mask_index)
+!$ACC ENTER DATA COPYIN(mg_solve_index)
+!$ACC ENTER DATA COPYIN(mg_fast_s_index)
+!$ACC ENTER DATA COPYIN(mg_fast_d_index)
+!$ACC ENTER DATA COPYIN(mg_schwarz_wt_index)
+!$ACC ENTER DATA COPYIN(mg_g_index)
+
+!$ACC ENTER DATA COPYIN(mg_jh)
+!$ACC ENTER DATA COPYIN(mg_jht)
+!$ACC ENTER DATA COPYIN(mg_jhfc )
+!$ACC ENTER DATA COPYIN(mg_jhfct)
+!$ACC ENTER DATA COPYIN(mg_ah)
+!$ACC ENTER DATA COPYIN(mg_bh)
+!$ACC ENTER DATA COPYIN(mg_dh)
+!$ACC ENTER DATA COPYIN(mg_dht)
+!$ACC ENTER DATA COPYIN(mg_zh)
+!$ACC ENTER DATA COPYIN(mg_rstr_wt)
+!$ACC ENTER DATA COPYIN(mg_mask)
+!$ACC ENTER DATA COPYIN(mg_fast_s)
+!$ACC ENTER DATA COPYIN(mg_fast_d)
+!$ACC ENTER DATA COPYIN(mg_schwarz_wt)
+!$ACC ENTER DATA COPYIN(mg_solve_e)
+!$ACC ENTER DATA COPYIN(mg_solve_r)
+!$ACC ENTER DATA COPYIN(mg_h1)
+!$ACC ENTER DATA COPYIN(mg_h2)
+!$ACC ENTER DATA COPYIN(mg_b)
+!$ACC ENTER DATA COPYIN(mg_g)
+!$ACC ENTER DATA COPYIN(mg_work)
+!$ACC ENTER DATA COPYIN(mg_work2)
+!$ACC ENTER DATA COPYIN(mg_worke)
+
+!$ACC ENTER DATA COPYIN(mg_imask)
+
+!$ACC ENTER DATA COPYIN(mg_h1_n)
+!$ACC ENTER DATA COPYIN(p_mg_h1)
+!$ACC ENTER DATA COPYIN(p_mg_b)
+!$ACC ENTER DATA COPYIN(p_mg_msk)
+
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine hmh_gmres_acc_data_copyin()
 c-----------------------------------------------------------------------
 #ifdef _OPENACC

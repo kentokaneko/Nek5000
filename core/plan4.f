@@ -49,6 +49,7 @@ C
       if (igeom.eq.1) then
 
          call plan4_acc_data_copyin()
+         if (istep.eq.1) call hsmg_acc_data_copyin()
          call makef_acc
 !$acc update host(bfx,bfy,bfz)
 

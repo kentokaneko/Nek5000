@@ -647,7 +647,7 @@ c#endif
       i = enx*eny*enz*nelv+1
       mg_work_size = enx*eny*enz*nelv
 
-c#ifdef DEBUG
+#ifdef DEBUG
 !$ACC UPDATE HOST(mg_work)
         write(0,*), ''
         write(0,*), '**** AFTER hsmg_schwarz_toext3d ****'
@@ -657,12 +657,12 @@ c#ifdef DEBUG
      $     k=1,mg_nh(l))
         write(0,*), 'mg_work(1,1:mg_nh(l)', nl**ndim, ',1): ', 
      $     (mg_work(k + l**ndim), k=1,mg_nh(l))
-c#endif
+#endif
 
 c     exchange interior nodes
       call hsmg_extrude(mg_work,0,zero,mg_work,2,one,enx,eny,enz)
 
-c#ifdef DEBUG
+#ifdef DEBUG
 !$ACC UPDATE HOST(mg_work)
         write(0,*), ''
         write(0,*), '**** AFTER hsmg_extrude, 1/5 ****'
@@ -672,11 +672,11 @@ c#ifdef DEBUG
      $     k=1,mg_nh(l))
         write(0,*), 'mg_work(1,1:mg_nh(l)', nl**ndim, ',1): ', 
      $     (mg_work(k + l**ndim), k=1,mg_nh(l))
-c#endif
+#endif
 
       call hsmg_schwarz_dssum2(mg_work,l,mg_work_size)
 
-c#ifdef DEBUG
+#ifdef DEBUG
 !$ACC UPDATE HOST(mg_work)
         write(0,*), ''
         write(0,*), '**** AFTER hsmg_schwarz_dssum2 ****'
@@ -686,11 +686,11 @@ c#ifdef DEBUG
      $     k=1,mg_nh(l))
         write(0,*), 'mg_work(1,1:mg_nh(l)', nl**ndim, ',1): ', 
      $     (mg_work(k + l**ndim), k=1,mg_nh(l))
-c#endif
+#endif
 
       call hsmg_extrude(mg_work,0,one ,mg_work,2,onem,enx,eny,enz)
 
-c#ifdef DEBUG
+#ifdef DEBUG
 !$ACC UPDATE HOST(mg_work)
         write(0,*), ''
         write(0,*), '**** AFTER hsmg_extrude, 2/5 ****'
@@ -700,11 +700,11 @@ c#ifdef DEBUG
      $     k=1,mg_nh(l))
         write(0,*), 'mg_work(1,1:mg_nh(l)', nl**ndim, ',1): ', 
      $     (mg_work(k + l**ndim), k=1,mg_nh(l))
-c#endif
+#endif
 
       call hsmg_fdm(mg_work(i),mg_work,l) ! Do the local solves
 
-c#ifdef DEBUG
+#ifdef DEBUG
 !$ACC UPDATE HOST(mg_work)
         write(0,*), ''
         write(0,*), '**** AFTER hsmg_fdm ****'
@@ -714,7 +714,7 @@ c#ifdef DEBUG
      $     k=1,mg_nh(l))
         write(0,*), 'mg_work(1,1:mg_nh(l)', nl**ndim, ',1): ', 
      $     (mg_work(k + l**ndim), k=1,mg_nh(l))
-c#endif
+#endif
 
 c     Sum overlap region (border excluded)
       call hsmg_extrude(mg_work,0,zero,mg_work(i),0,one ,enx,eny,enz)

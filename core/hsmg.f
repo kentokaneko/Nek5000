@@ -710,7 +710,17 @@ c     call hsmg_extrude(mg_work,0,zero,mg_work,2,one,enx,eny,enz)
      $     (mg_work(k + l**ndim), k=1,mg_nh(l))
 #endif
 
+      call chk2n('u2 1',mg_work,nenxyz)
+      call chk2n('u2 2',mg_work(i),nenxyz)
+      call chk4('u2 3',mg_work,10)
+      call chk4('u2 4',mg_work(i),10)
+
       call hsmg_fdm(mg_work(i),mg_work,l) ! Do the local solves
+
+      call chk2n('u2 5',mg_work,nenxyz)
+      call chk2n('u2 6',mg_work(i),nenxyz)
+      call chk4('u2 7',mg_work,10)
+      call chk4('u2 8',mg_work(i),10)
 
 #ifdef DEBUG
 !$ACC UPDATE HOST(mg_work)

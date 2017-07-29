@@ -378,6 +378,10 @@ c
       call rzero_acc(x_gmres,n)
 
       outer = 0
+      call chk2('tb ',res)
+      call chk2('tc ',h1)
+      call chk2('td ',h2)
+      call chk2('te ',wt)
       do while (iconv.eq.0.and.iter.lt.500)
          outer = outer+1
 
@@ -392,6 +396,9 @@ c           call copy(r,res,n)
                                                      !      -1
             call col2_acc  (r_gmres,ml_gmres,n)          ! r = L   r
          endif
+
+         call chk2('tf ',r_gmres)
+         call chk2('u0 ',w_gmres)
 
 #ifdef _OPENACC
 
@@ -420,6 +427,7 @@ c        construct or acc routine"
 
 !$ACC UPDATE HOST(gamma_gmres(1))
       temp = gamma_gmres(1)
+      write (6,*) 'temp=',temp
 
 #else
          gamma_gmres(1) = sqrt(glsc3(r_gmres,r_gmres,wt,n)) ! gamma  = \/ (r,r)
@@ -450,6 +458,7 @@ c        construct or acc routine"
                                                        !       -1
             call col3_acc(w_gmres,mu_gmres,v_gmres(1,j),n) ! w  = U   v
                                                        !           j
+            call chk2('u1 ',w_gmres)
 
 c . . . . . Overlapping Schwarz + coarse-grid . . . . . . .
 
@@ -460,12 +469,14 @@ c     if (outer.gt.2) if_hyb = .true.       ! Slow outer convergence
 c           MJO - 3/17/17 - for variable h1, h2 in time
 
             if (ifmgrid) then
+               call chk2('u2 ',w_gmres)
                call h1mg_solve(z_gmres(1,j),w_gmres,if_hyb) ! z  = M   w
+               call chk2('u3 ',z_gmres)
             else                                            !  j
 c              FIXME: Only mgrid portion is implemented in ACC so far
                kfldfdm = ndim+1
                if (param(100).eq.2) then
-                   call h1_overlap_2 (z_gmres(1,j),w_gmres,pmask)
+                  call h1_overlap_2 (z_gmres(1,j),w_gmres,pmask)
                else
                    call fdm_h1
      $               (z_gmres(1,j),w_gmres,d,pmask,vmult,nelv,
@@ -474,6 +485,8 @@ c              FIXME: Only mgrid portion is implemented in ACC so far
                call crs_solve_h1 (wk,w_gmres)        ! z  = M   w
                call add2         (z_gmres(1,j),wk,n) !  j
             endif
+            call chk2('u2 ',w_gmres)
+            call chk2('u3 ',z_gmres)
 c           ROR: 2016-06-13: Calling ortho_acc() on CPU fails for
 c           certain 2D test cases (such as eddy_uv).  This is not
 c           entirely unexpected, since ortho_acc() hasn't been

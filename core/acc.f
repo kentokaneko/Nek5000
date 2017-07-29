@@ -1558,6 +1558,7 @@ c-----------------------------------------------------------------------
 
       real a(n1,n1,n1,nelv)
       integer e
+      character*4 s4
 
       do e = 1,nelv
          max = glamax_acc(a(1,1,1,e),n1**3)

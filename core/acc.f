@@ -1493,12 +1493,14 @@ c-----------------------------------------------------------------------
       character*3 s3
       parameter (lt=lx1*ly1*lz1*lelt)
       real a(lt)
-      
+
       n=nx1*ny1*nz1*nelt
+
       amx=glamax_acc(a,n)
       ams=glsum_acc(a,n)
-      write(6,*) 'check2: ',s3,amx
-      write(6,*) 'check4: ',s3,ams
+
+      write(6,*) 'c2max: ',s3,amx
+      write(6,*) 'c2sum: ',s3,ams
 
       return
       end
@@ -1506,14 +1508,34 @@ c-----------------------------------------------------------------------
       subroutine chk3(s3,a)
       include 'SIZE'
       character*3 s3
+
       parameter (lt=lx1*ly1*lz1*lelt)
       real a(lt)
-      
+
       n=nx1*ny1*nz1*nelt
+
       amx=glamax(a,n)
       ams=glsum(a,n)
-      write(6,*) 'check3: ',s3,amx
-      write(6,*) 'check5: ',s3,ams
+
+      write(6,*) 'c3max: ',s3,amx
+      write(6,*) 'c3sum: ',s3,ams
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine chkn(s4,a,n)
+      include 'SIZE'
+      character*3 s4
+
+      real a(n)
+
+      n=nx1*ny1*nz1*nelt
+
+      amx=glamax(a,n)
+      ams=glsum(a,n)
+
+      write(6,*) 'cNmax: ',s4,amx
+      write(6,*) 'cNsum: ',s4,ams
 
       return
       end

@@ -2060,7 +2060,7 @@ c-----------------------------------------------------------------------
       real tmp, tmp_ptr(1),work(1)
 
 !$ACC DATA COPYOUT(tmp_ptr) CREATE(work) PRESENT(x)
-!$ACC KERNELS 
+!$ACC KERNELS
       tmp = 0.
       do i=1,n
          tmp = tmp+x(i)
@@ -2071,6 +2071,27 @@ c-----------------------------------------------------------------------
 !$ACC END DATA
 
       glsum_acc = tmp_ptr(1)
+
+      return
+      END
+c-----------------------------------------------------------------------
+      function glasum_acc (x,n)
+      real x(n)
+      integer n
+      real tmp, tmp_ptr(1),work(1)
+
+!$ACC DATA COPYOUT(tmp_ptr) CREATE(work) PRESENT(x)
+!$ACC KERNELS
+      tmp = 0.
+      do i=1,n
+         tmp = tmp+abs(x(i))
+      enddo
+      tmp_ptr(1) = tmp
+!$ACC END KERNELS
+      call gop_acc(tmp_ptr,work,'+  ',1)
+!$ACC END DATA
+
+      glasum_acc = tmp_ptr(1)
 
       return
       END

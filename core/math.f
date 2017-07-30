@@ -1233,6 +1233,19 @@ c-----------------------------------------------------------------------
       return
       END
 c-----------------------------------------------------------------------
+      function glasum (x,n)
+      DIMENSION X(1)
+      DIMENSION TMP(1),WORK(1)
+      TSUM = 0.
+      DO 100 I=1,N
+         TSUM = TSUM+ABS(X(I))
+ 100  CONTINUE
+      TMP(1)=TSUM
+      CALL GOP(TMP,WORK,'+  ',1)
+      GLSUM = TMP(1)
+      return
+      END
+c-----------------------------------------------------------------------
       real function glamax(a,n)
       REAL A(1)
       DIMENSION TMP(1),WORK(1)

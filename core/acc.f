@@ -10,34 +10,42 @@ c-----------------------------------------------------------------------
       if (icalld.eq.0) then ! ONE TIME ONLY
 
         icalld=1
-!$acc   enter data copyin (v1mask,v2mask,v3mask,pmask,tmask,omask)
-!$acc   enter data copyin (pmult,tmult,vmult)
-!$acc   enter data copyin (dxm1,dxtm1,w3m1)
-!$acc   enter data copyin (bm1,bm1lag,binvm1,bintm1)
-!$acc   enter data copyin (jacm1,jacmi)
-!$acc   enter data copyin (xm1,ym1,zm1)
-!$acc   enter data copyin (unx,uny,unz,area)
-!$acc   enter data copyin (rxm1,sxm1,txm1)
-!$acc   enter data copyin (rym1,sym1,tym1)
-!$acc   enter data copyin (rzm1,szm1,tzm1)
-!$acc   enter data copyin (g1m1,g2m1,g3m1,g4m1,g5m1,g6m1)
-!$acc   enter data copyin (cbc,bc)
-!$acc   enter data copyin (abx1,aby1,abz1,abx2,aby2,abz2)
-!$acc   enter data copyin (ab)
-!$acc   enter data copyin (bfx,bfy,bfz)
-!$acc   enter data copyin (vx,vy,vz,vx_e,vy_e,vz_e)
-!$acc   enter data copyin (vtrans)
-!$acc   enter data copyin (vxlag,vylag,vzlag)
-!$acc   enter data copyin (bd)
-!$acc   enter data copyin (pr,prlag,qtl,usrdiv)
-!$acc   enter data copyin (vtrans,vdiff)
-!$acc   enter data copyin (param,nelfld)
+!$acc enter data copyin(vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
+!$acc enter data copyin(abx1,aby1,abz1,abx2,aby2,abz2,vdiff_e)
+!$acc enter data copyin(vtrans,vdiff,bfx,bfy,bfz,cflf,c_vx,fw)
+!$acc enter data copyin(bmnv,bmass,bdivw,bx,by,bz,pm,bmx,bmy,bmz)
+!$acc enter data copyin(vx,vy,vz,pr,t,vx_e,vy_e,vz_e)
+!$acc enter data copyin(bbx1,bby1,bbz1,bbx2,bby2,bbz2,bxlag,bylag,bzlag)
+!$acc enter data copyin(pmlag,prlag)
+!$acc enter data copyin(qtl,usrdiv)
+!$acc enter data copyin(v1mask,v2mask,v3mask,pmask,tmask,omask,vmult)
+!$acc enter data copyin(tmult,b1mask,b2mask,b3mask,bpmask)
+!$acc enter data copyin(v1mask,v2mask,v3mask,pmask,tmask,omask)
+!$acc enter data copyin(pmult,tmult,vmult)
+!$acc enter data copyin(dxm1,dxtm1,w3m1)
+!$acc enter data copyin(bm1,bm1lag,binvm1,bintm1)
+!$acc enter data copyin(jacm1,jacmi)
+!$acc enter data copyin(xm1,ym1,zm1)
+!$acc enter data copyin(unx,uny,unz,area)
+!$acc enter data copyin(rxm1,sxm1,txm1)
+!$acc enter data copyin(rym1,sym1,tym1)
+!$acc enter data copyin(rzm1,szm1,tzm1)
+!$acc enter data copyin(g1m1,g2m1,g3m1,g4m1,g5m1,g6m1)
+!$acc enter data copyin(cbc,bc)
+!$acc enter data copyin(abx1,aby1,abz1,abx2,aby2,abz2)
+!$acc enter data copyin(ab)
+!$acc enter data copyin(vtrans)
+!$acc enter data copyin(vxlag,vylag,vzlag)
+!$acc enter data copyin(bd)
+!$acc enter data copyin(pr,prlag,qtl,usrdiv)
+!$acc enter data copyin(vtrans,vdiff)
+!$acc enter data copyin(param,nelfld)
 
 !$acc   enter data create (ibc_acc)
 
 c!$acc   enter data copyin (tlag,vgradt1,vgradt2)
 c!$acc   enter data copyin (vdiff_e)
-c!$acc   enter data copyin (bq,t,usrdiv)
+c!$acc   enter data copyin (bq,usrdiv)
 
 
       endif
@@ -269,14 +277,14 @@ c-----------------------------------------------------------------------
       real tmpu1,tmpu2,tmpu3
 
 !$ACC DATA PRESENT (d (nx1,nx1))
-!$ACC&     PRESENT (u1(nx1,ny1,nz1,nelt))
-!$ACC&     PRESENT (u2(nx1,ny1,nz1,nelt),u3(nx1,ny1,nz1,nelt))
-!$ACC$     PRESENT (v1(nx1,ny1,nz1,nelt),v2(nx1,ny1,nz1,nelt))
-!$ACC&     PRESENT (v3(nx1,ny1,nz1,nelt))
+!$ACC&     PRESENT (u1(nx1,ny1,nz1,nelv))
+!$ACC&     PRESENT (u2(nx1,ny1,nz1,nelv),u3(nx1,ny1,nz1,nelv))
+!$ACC$     PRESENT (v1(nx1,ny1,nz1,nelv),v2(nx1,ny1,nz1,nelv))
+!$ACC&     PRESENT (v3(nx1,ny1,nz1,nelv))
 !$ACC PARALLEL LOOP COLLAPSE(4) GANG WORKER VECTOR
 !$ACC&    PRIVATE(tmpu1,tmpu2,tmpu3)
 !dir$ NOBLOCKING
-      do e=1,nelt
+      do e=1,nelv
          do k=1,nz1
             do j=1,ny1
                do i=1,nx1
@@ -321,8 +329,11 @@ c-----------------------------------------------------------------------
       scale = -1./3.
       if (ifstrs) scale =  2./3.
 
+      dtbd = bd(1)/dt
+
 !$acc data present(resv1,resv2,resv3,h1,h2) create(ta1,ta2,ta3,ta4)
-!$ac& present(vdiff,qtl,pr,vtrans,vx,vy,vz,bfx,bfy,bfz,dtbd)
+!$acc& present(vdiff,qtl,pr,vtrans,vx,vy,vz,bfx,bfy,bfz)
+      call outpost(resv1,resv2,resv3,h1,h2,'gv_')
 
 !$acc parallel loop 
       do i=1,n
@@ -621,7 +632,6 @@ c     du = J   ( C . grad Ju)
       integer e,p,q,r
 
       call chck('p11')
-      write(6,*) nelv,' echk'
 !$acc parallel loop present(du,u,c,b,jj,dd) gang
 !$acc&              private(wk1,wk2,wk3,wk4,wk5,wk6)
       do e=1,nelv
@@ -961,7 +971,9 @@ c
 
       n = lx1*ly1*lz1*nelv
 
-!$acc    data present(ab,vx,vy,vz,vxlag,vylag,vzlag,vx_e,vy_e,vz_e)
+!$acc update device(ab)
+!$acc data present(vx,vy,vz,vxlag,vylag,vzlag,vx_e,vy_e,vz_e)
+
       if (nab.eq.3) then
 
 !$acc    parallel loop
@@ -1069,7 +1081,6 @@ c-----------------------------------------------------------------------
      $                    rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1,
      $                    w1,  w2,  w3,  jacmi)
 c-----------------------------------------------------------------------
-c      implicit none
 
       include 'SIZE'
 
@@ -1100,52 +1111,39 @@ c      implicit none
       integer i,j,k,l,e
 
       nxyz = lx1*ly1*lz1
-      nelt = lelt
 
 !$ACC DATA PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t,w1,w2,w3)
 !$ACC& PRESENT(jacmi,rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
 
 
-!$ACC PARALLEL LOOP COLLAPSE(4) GANG WORKER VECTOR
-         do e = 1,nelt
-            do k = 1,lz1
-               do j = 1,ly1
-                  do i = 1,lx1
-           
-                   l = i + (j-1)*lx1 + (k-1)*lx1*ly1 
-                   
-                     w1(i,j,k,e)= (u3r(i,j,k,e)*rym1(i,j,k,e)
-     $                    + u3s(i,j,k,e)*sym1(i,j,k,e)
-     $                    + u3t(i,j,k,e)*tym1(i,j,k,e)
-     $                    - u2r(i,j,k,e)*rzm1(i,j,k,e)
-     $                    - u2s(i,j,k,e)*szm1(i,j,k,e)
-     $                    - u2t(i,j,k,e)*tzm1(i,j,k,e))*jacmi(l,e)
+!$ACC PARALLEL LOOP GANG WORKER VECTOR
+         do i = 1,nxyz*nelv
+            w1(i,1,1,1) = (u3r(i,1,1,1)*rym1(i,1,1,1)
+     $                   + u3s(i,1,1,1)*sym1(i,1,1,1)
+     $                   + u3t(i,1,1,1)*tym1(i,1,1,1)
+     $                   - u2r(i,1,1,1)*rzm1(i,1,1,1)
+     $                   - u2s(i,1,1,1)*szm1(i,1,1,1)
+     $                   - u2t(i,1,1,1)*tzm1(i,1,1,1))*jacmi(i,1)
 
-                     w2(i,j,k,e)= (u1r(i,j,k,e)*rzm1(i,j,k,e)
-     $                    + u1s(i,j,k,e)*szm1(i,j,k,e)
-     $                    + u1t(i,j,k,e)*tzm1(i,j,k,e)
-     $                    - u3r(i,j,k,e)*rxm1(i,j,k,e)
-     $                    - u3s(i,j,k,e)*sxm1(i,j,k,e)
-     $                    - u3t(i,j,k,e)*txm1(i,j,k,e))*jacmi(l,e)
+            w2(i,1,1,1)= (u1r(i,1,1,1)*rzm1(i,1,1,1)
+     $                  + u1s(i,1,1,1)*szm1(i,1,1,1)
+     $                  + u1t(i,1,1,1)*tzm1(i,1,1,1)
+     $                  - u3r(i,1,1,1)*rxm1(i,1,1,1)
+     $                  - u3s(i,1,1,1)*sxm1(i,1,1,1)
+     $                  - u3t(i,1,1,1)*txm1(i,1,1,1))*jacmi(i,1)
 
-                     w3(i,j,k,e)= (u2r(i,j,k,e)*rxm1(i,j,k,e)
-     $                    + u2s(i,j,k,e)*sxm1(i,j,k,e)
-     $                    + u2t(i,j,k,e)*txm1(i,j,k,e)
-     $                    - u1r(i,j,k,e)*rym1(i,j,k,e)
-     $                    - u1s(i,j,k,e)*sym1(i,j,k,e)
-     $                    - u1t(i,j,k,e)*tym1(i,j,k,e))*jacmi(l,e)
-                  enddo
-               enddo
-            enddo
+            w3(i,1,1,1)= (u2r(i,1,1,1)*rxm1(i,1,1,1)
+     $                  + u2s(i,1,1,1)*sxm1(i,1,1,1)
+     $                  + u2t(i,1,1,1)*txm1(i,1,1,1)
+     $                  - u1r(i,1,1,1)*rym1(i,1,1,1)
+     $                  - u1s(i,1,1,1)*sym1(i,1,1,1)
+     $                  - u1t(i,1,1,1)*tym1(i,1,1,1))*jacmi(i,1)
          enddo
 !$ACC END PARALLEL LOOP
 
 !$ACC END DATA
 
-c         write(6,*) iter, ' iter'
-
-
-      flop_a = flop_a + (18.*nxyz*lx1)*nelt
+c     flop_a = flop_a + (18.*nxyz*lx1)*nelt
 
 
 
@@ -1186,7 +1184,7 @@ c-----------------------------------------------------------------------
 !$ACC&     private(tmpr1,tmpr2,tmpr3,tmps1,tmps2,tmps3,
 !$ACC&             tmpt1,tmpt2,tmpt3)
 !dir$ NOBLOCKING
-      do e = 1,nelt
+      do e = 1,nelv
          do k = 1,nz1
             do j = 1,ny1
                do i = 1,nx1
@@ -1265,11 +1263,6 @@ c
 !$ACC& PRESENT(dxm1,dxtm1)
 !$ACC& CREATE(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
 
-ccc!$ACC& PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
-
-      call chk2('u1:',u1)
-      call chk2('u2:',u2)
-      call chk2('u3:',u3)
       call global_curl_grad3_acc(u1r,u1s,u1t,
      $   u2r,u2s,u2t,u3r,u3s,u3t,u1,u2,u3,dxm1)
 
@@ -1277,240 +1270,23 @@ ccc!$ACC& PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
      $               rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1,
      $               w1,w2,w3,jacmi)
 
-      call chk2('w1:',w1)
-      call chk2('w2:',w2)
-      call chk2('w3:',w3)
 
-ccc!$ACC UPDATE HOST(w1,w2,w3)
+
+      ifielt = ifield
+      ifield = 1
+      call opcolv_acc (w1,w2,w3,bm1)
+      call dssum      (w1,nx1,ny1,nz1)
+      call dssum      (w2,nx1,ny1,nz1)
+      call dssum      (w3,nx1,ny1,nz1)
+      call opcolv     (w1,w2,w3,binvm1)
+      ifield = ifielt
+
 !$ACC END DATA
-
-ccc      if (ifavg.and..not.ifcyclic) then
-ccc         call chck('t03')
-ccc
-ccc         ifielt = ifield
-ccc         ifield = 1
-ccc
-ccc
-ccc         call opcolv(w1,w2,w3,bm1)
-ccc         call opdssum(w1,w2,w3)
-ccc         call opcolv(w1,w2,w3,binvm1)
-ccc
-ccc!$ACC UPDATE DEVICE(w1,w2,w3)
-ccc
-ccc
-ccc         ifield = ifielt
-ccc      endif
-ccc
 
       return
       end
 
 c-----------------------------------------------------------------------
-      subroutine crespsp_acc (respr)
-
-C     Compute startresidual/right-hand-side in the pressure
-
-      include 'SIZE'
-      include 'TOTAL'
-
-      real           respr (lx1,ly1,lz1,lelv)
-c
-      real           ta1   (lx1,ly1,lz1,lelv)
-     $ ,             ta2   (lx1,ly1,lz1,lelv)
-     $ ,             ta3   (lx1,ly1,lz1,lelv)
-     $ ,             wa1   (lx1*ly1*lz1*lelv)
-     $ ,             wa2   (lx1*ly1*lz1*lelv)
-     $ ,             wa3   (lx1*ly1*lz1*lelv)
-     $ ,             wa4   (lx1*ly1*lz1*lelv*ldimt1)
-      real           w1    (lx1,ly1,lz1)
-     $ ,             w2    (lx1,ly1,lz1)
-     $ ,             w3    (lx1,ly1,lz1)
-
-      character cb*3,c1*1
-      integer e,f
-
-!$acc routine(facind) seq
-      
-      nxyz1  = nx1*ny1*nz1
-      ntot1  = nxyz1*nelv
-      ntot2  = LX1*LY1*LZ1*LELV
-      nfaces = 2*ndim
-
-      write(6,*) 'call opcurl'
-!$ACC ENTER DATA CREATE (ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
-c     -mu*curl(curl(v))
-      call chk2('b1:',vx_e)
-      call chk2('b2:',vy_e)
-      call chk2('b3:',vz_e)
-      call op_curl_acc (ta1,ta2,ta3,vx_e,vy_e,vz_e)
-      call chk2('c1:',ta1)
-      call chk2('c2:',ta2)
-      call chk2('c3:',ta3)
-      ! call print_acc(ta1,ntot2,'c1: ',1)
-      ! call print_acc(ta2,ntot2,'c2: ',1)
-      ! call print_acc(ta3,ntot2,'c3: ',1)
-      call op_curl_acc (wa1,wa2,wa3,ta1,ta2,ta3)
-      call chk2('c4:',wa1)
-      call chk2('c5:',wa2)
-      call chk2('c6:',wa3)
-      ! call print_acc(wa1,ntot2,'c4: ',1)
-      ! call print_acc(wa2,ntot2,'c5: ',1)
-      ! call print_acc(wa3,ntot2,'c6: ',1)
-
-      call rzero_acc(ta1,ntot1)
-      call rzero_acc(ta2,ntot1)
-      call rzero_acc(ta3,ntot1)
-      ! No support for lowmach
-      !call wgradm1_acc (ta1,ta2,ta3,qtl,nelt)
-      call opcolv_acc  (wa1,wa2,wa3,bm1)
-      call chk2('c7:',wa1)
-      call chk2('c8:',wa2)
-      call chk2('c9:',wa3)
-
-      scale = -4./3. 
-      call opadd2cm_acc(wa1,wa2,wa3,ta1,ta2,ta3,scale)
-      call chk2('d4:',wa1)
-      call chk2('d5:',wa2)
-      call chk2('d6:',wa3)
-
-c compute stress tensor for ifstrs formulation - variable viscosity Pn-Pn
-      if (ifstrs) 
-     $   call exitti('ifstrs not yet support on gpu$',nelv)
-
-!$acc update device (vdiff,vtrans)
-      call invcol3_acc  (wa4,vdiff,vtrans,ldimt1*ntot1)
-c     call invcol3_acc  (wa4,vdiff,vtrans,ntot1)
-      call chk2('d7:',wa4)
-        
-      call opcolv_acc   (wa1,wa2,wa3,wa4)
-      call chk2('e1:',wa1)
-      call chk2('e2:',wa2)
-      call chk2('e3:',wa3)
-
-c     add old pressure term because we solve for delta p 
-
-      call invers2_acc (ta1,vtrans,ntot1)
-      call chk2('e4:',ta1)
-      call chk2('e5:',vtrans)
-      call rzero_acc   (ta2,ntot1)
-
-!$ACC UPDATE HOST(pr)
-      call bcdirsc (pr)
-!$ACC UPDATE DEVICE(pr)
-      call chk2('e6:',pr)
-      call chk2('e7:',respr)
-      call axhelm_acc  (respr,pr,ta1,ta2,1,1)
-      call chk2('e8:',respr)
-      call chk2('e9:',ta1)
-      call chk2('ea:',ta2)
-      call chsign_acc  (respr,ntot1)
-      call chk2('eb ',respr)
-
-c     add explicit (NONLINEAR) terms 
-      n = nx1*ny1*nz1*nelv
-
-      call chk2('ec ',vtrans)
-      call chk2('ed ',bfx)
-      call chk2('ee ',bfy)
-      call chk2('ef ',bfz)
-      call chk2('f0 ',wa1)
-      call chk2('f1 ',wa2)
-      call chk2('f2 ',wa3)
-
-!$acc parallel loop present(ta1,ta2,ta3,wa1,wa2,wa3)
-      do i=1,n
-         ta1(i,1,1,1) = bfx(i,1,1,1)/vtrans(i,1,1,1,1)-wa1(i)
-         ta2(i,1,1,1) = bfy(i,1,1,1)/vtrans(i,1,1,1,1)-wa2(i)
-         ta3(i,1,1,1) = bfz(i,1,1,1)/vtrans(i,1,1,1,1)-wa3(i)
-      enddo
-!$acc end parallel
-
-      call chk2('f3 ',ta1)
-      call chk2('f4 ',ta2)
-      call chk2('f5 ',ta3)
-
-      write(6,*) 'call dssum',ifield
-      call dssum (ta1,nx1,ny1,nz1)
-      call dssum (ta2,nx1,ny1,nz1)
-      call dssum (ta3,nx1,ny1,nz1)
-      write(6,*) 'done dssum',ifield
-
-      call chk2('f6 ',ta1)
-      call chk2('f7 ',ta2)
-      call chk2('f8 ',ta3)
-
-!$acc parallel loop present(ta1,ta2,ta3,binvm1)
-      do i=1,n
-         ta1(i,1,1,1) = ta1(i,1,1,1)*binvm1(i,1,1,1)
-         ta2(i,1,1,1) = ta2(i,1,1,1)*binvm1(i,1,1,1)
-         ta3(i,1,1,1) = ta3(i,1,1,1)*binvm1(i,1,1,1)
-      enddo
-!$acc end parallel
-      call chck('h79')
-
-      call chk2('f9 ',ta1)
-      call chk2('fa ',ta2)
-      call chk2('fb ',ta3)
-
-      dtbd = bd(1)/dt
-c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
-
-      call crespsp_face_update(respr,ta1,ta2,ta3,dtbd,w1,w2,w3)
-
-      call chk2('fc1',respr)
-      call chck('h89')
-
-!$acc parallel loop gang
-!$acc&private(w1,w2,w3)
-!$acc&present(ta1,ta2,ta3,w3m1,rxm1,rym1,rzm1
-!$acc&         ,sxm1,sym1,szm1,txm1,tym1,tzm1
-!$acc&         ,dxtm1,bm1,qtl,respr)
-      do e=1,nelv
-!$acc  loop vector
-       do i=1,lx1*ly1*lz1
-         w1(i,1,1) = (rxm1(i,1,1,e)*ta1(i,1,1,e) ! Jacobian
-     $               +rym1(i,1,1,e)*ta2(i,1,1,e) ! included
-     $               +rzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
-         w2(i,1,1) = (sxm1(i,1,1,e)*ta1(i,1,1,e)
-     $               +sym1(i,1,1,e)*ta2(i,1,1,e)
-     $               +szm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
-         w3(i,1,1) = (txm1(i,1,1,e)*ta1(i,1,1,e)
-     $               +tym1(i,1,1,e)*ta2(i,1,1,e)
-     $               +tzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
-       enddo
-
-!$acc  loop vector collapse(3)
-       do k=1,nz1
-       do j=1,ny1
-       do i=1,nx1
-          t1 = 0.0
-!$acc     loop seq
-          do l=1,nx1
-             t1 = t1 + dxtm1(i,l)*w1(l,j,k) ! D^T
-     $               + dxtm1(j,l)*w2(i,l,k)
-     $               + dxtm1(k,l)*w3(i,j,l)
-          enddo
-          respr(i,j,k,e) = respr(i,j,k,e) + t1
-     $                   + dtbd*bm1(i,j,k,e)*qtl(i,j,k,e)
-       enddo
-       enddo
-       enddo
-
-      enddo
-!$acc end parallel
-
-      call chk2('fc ',respr)
-
-C     Orthogonalize to (1,1,...,1)T for all-Dirichlet case
-      call ortho_acc (respr)
-
-      call chk2('fd ',respr)
-
-!$acc exit data
-
-      return
-      end
-c----------------------------------------------------------------------
       subroutine opadd2cm_acc (a1,a2,a3,b1,b2,b3,c)
       INCLUDE 'SIZE'
       REAL A1(lx1*ly1*lz1*lelt),
@@ -1549,7 +1325,7 @@ c-----------------------------------------------------------------------
       n=nx1*ny1*nz1*nelt
 
       amx=glamax_acc(a,n)
-      ams=glsum_acc(a,n)
+      ams=glasum_acc(a,n)
 
       write(6,*) s3,   ' dev  max ',amx
       write(6,*) '   ','      sum ',ams
@@ -1567,7 +1343,7 @@ c-----------------------------------------------------------------------
       n=nx1*ny1*nz1*nelt
 
       amx=glamax(a,n)
-      ams=glsum(a,n)
+      ams=glasum(a,n)
 
       write(6,*) s3,   ' host max ',amx
       write(6,*) '   ','      sum ',ams
@@ -1577,15 +1353,25 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine chk2n(s4,a,n)
       include 'SIZE'
-      character*3 s4
+      include 'TOTAL'
+      character*4 s4
+
+      integer icalld
+      save    icalld
+      data    icalld /0/
 
       real a(n)
 
-      amx=glamax(a,n)
-      ams=glsum(a,n)
+      icalld = icalld+1
 
-      write(6,*) s4,     ' dev  max ',amx
-      write(6,*) '    ', '      sum ',ams
+      write(6,*) istep,icalld,n   ,' ',s4,'  chk2n aaa'
+      write(6,*) istep,icalld,a(1),' ',s4,'  chk2n aa2'
+
+      amx=glamax_acc(a,n)
+      ams=glasum_acc(a,n)
+
+      write(6,*) s4,     ' dev  max ',amx,'  chk2n aa3'
+      write(6,*) '    ', '      sum ',ams,'  chk2n aa4'
 
       return
       end
@@ -1597,7 +1383,7 @@ c-----------------------------------------------------------------------
       real a(n)
 
       amx=glamax(a,n)
-      ams=glsum(a,n)
+      ams=glasum(a,n)
 
       write(6,*) s4,     ' host max ',amx
       write(6,*) '    ', '      sum ',ams
@@ -1618,6 +1404,15 @@ c-----------------------------------------------------------------------
             write (6,*) s4,    ' e=',e,' max=',max
          else
             write (6,*) '    ',' e=',e,' max=',max
+         endif
+      enddo
+
+      do e = 1,nelv
+         sum = glasum_acc(a(1,1,1,e),n1**3)
+         if (e.eq.1) then
+            write (6,*) s4,    ' e=',e,' sum=',sum
+         else
+            write (6,*) '    ',' e=',e,' sum=',sum
          endif
       enddo
 

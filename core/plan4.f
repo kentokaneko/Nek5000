@@ -83,10 +83,11 @@ C        first, compute pressure
          npres=icalld
          etime1=dnekclock()
 
-!$ACC ENTER DATA COPYIN(h1,h2,respr,pmask)
+!$ACC ENTER DATA COPYIN(h1,h2,respr,pmask,res1,res2,res3)
 c        call outpost(h1,h2,respr,pr,t,'g_3')
 
          call crespsp_acc(respr)
+         call exitti('exit after crespsp_acc$',1)
 
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
@@ -108,6 +109,7 @@ c        call outpost(h1,h2,respr,pr,t,'g__')
 
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
+
 !$ACC UPDATE HOST(pr)
 c        call outpost(h1,h2,respr,pr,t,'g__')
 !$ACC EXIT DATA 
@@ -116,34 +118,29 @@ c        call outpost(h1,h2,respr,pr,t,'g__')
          call chk3('u4:',h1)
          call chk3('u4:',h2)
 
+c        call outpost(h1,h2,dpr,pr,t,'g__')
+
          tpres=tpres+(dnekclock()-etime1)
 
-!$acc data create(res1,res2,res3)
-         call cresvsp_acc(res1,res2,res3,h1,h2)
-!$acc end data
+!$acc update host(h1,h2)
+         call cresvsp(res1,res2,res3,h1,h2)
+!$acc update device(res1,res2,res3,h1,h2)
 
+         call outpost(res2,res2,res3,h1,h2,'g__')
          call exitti('exit after cresvsp_acc$',1)
 
          call ophinv_pr(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
 
-!$acc update host(vx,vy,vz)
-c        call outpost(dv1,dv2,dv3,pr,t,'g__')
-         do i=1,lx1*ly1*lz1*nelv
-            vx(i,1,1,1)=vx(i,1,1,1)+dv1(i,1,1,1)   
-            vy(i,1,1,1)=vy(i,1,1,1)+dv2(i,1,1,1)   
-            vz(i,1,1,1)=vz(i,1,1,1)+dv3(i,1,1,1)   
-         enddo
-
-!$acc update device(vx,vy,vz,pr,t)
-         call outpost(vx,vy,vz,pr,t,'g__')
-  
 c below gives correct values in iterations
 c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310  
+
 !$ACC DATA COPY(vx,vy,vz,dv1,dv2,dv3)
          call add2_acc  (vx,dv1,n)      
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
 !$ACC END DATA 
+
+c        call outpost(vx,vy,vz,pr,t,'g__')
 
          IF (NIO.EQ.0) THEN
             WRITE(6,'(13X,A,1p2e13.4)')
@@ -490,25 +487,34 @@ C     Compute the residual for the velocity
       NTOT = NX1*NY1*NZ1*NELV
       INTYPE = -1
 
+c     call outpost(resv1,resv2,resv3,h1,h2,'gv_')
       CALL SETHLM  (H1,H2,INTYPE)
+c     call outpost(vx,vy,vz,h1,h2,'gv_')
 
       CALL OPHX    (RESV1,RESV2,RESV3,VX,VY,VZ,H1,H2)
+c     call outpost(resv1,resv2,resv3,h1,h2,'gv_')
       CALL OPCHSGN (RESV1,RESV2,RESV3)
 
       scale = -1./3.
       if (ifstrs) scale =  2./3.
 
-      call col3    (ta4,vdiff,qtl,ntot)
-      call add2s1  (ta4,pr,scale,ntot)    
-      call opgrad  (ta1,ta2,ta3,TA4)
+      call col3(ta4,vdiff,qtl,ntot)
+
+      call outpost(ta4,vdiff,qtl,pr,t,'gv_')
+      call add2s1 (ta4,pr,scale,ntot)    
+
+      call outpost(ta4,vdiff,qtl,pr,t,'gv_')
+      call opgrad (ta1,ta2,ta3,ta4)
+      call outpost(ta1,ta2,ta3,ta4,t,'gv_')
       if(IFAXIS) then
          CALL COL2 (TA2, OMASK,NTOT)
          CALL COL2 (TA3, OMASK,NTOT)
       endif
-c
+
       call opsub2  (resv1,resv2,resv3,ta1,ta2,ta3)
+      call outpost(resv1,resv2,resv3,h1,h2,'gv_')
       call opadd2  (resv1,resv2,resv3,bfx,bfy,bfz)
-C
+      call outpost(resv1,resv2,resv3,h1,h2,'gv_')
       return
       end
 
@@ -901,10 +907,15 @@ c
 !$ACC ENTER DATA CREATE (ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
 c     -mu*curl(curl(v))
 
-      call op_curl  (ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
-      call op_curl  (wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
-c     call outpost  (ta1,ta2,ta3,pr,t,'gc1')
-c     call outpost  (wa1,wa2,wa3,pr,t,'gc2')
+!$acc update host(vx_e,vy_e,vz_e)
+      call outpost(vx_e,vy_e,vz_e,pr,t,'gcp')
+c     call op_curl  (ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
+c     call op_curl  (wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+      call op_curl_acc(ta1,ta2,ta3,vx_e,vy_e,vz_e)
+      call op_curl_acc(wa1,wa2,wa3,ta1,ta2,ta3)
+!$acc update host(ta1,ta2,ta3,wa1,wa2,wa3)
+      call outpost  (ta1,ta2,ta3,pr,t,'gcp')
+      call outpost  (wa1,wa2,wa3,pr,t,'gcp')
 c     call exitti('quit after op_curl2$',nelv)
 
       ! No support for lowmach

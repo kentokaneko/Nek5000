@@ -4594,19 +4594,51 @@ c
       include 'INPUT'
       include 'TSTEP'
       include 'WZ'
+      include 'SOLN'
 c
       parameter (lxyz=lx1*ly1*lz1)
       real ux(lxyz,1),uy(lxyz,1),uz(lxyz,1),u(lxyz,1)
 c
-      common /ctmp1/ ur(lxyz),us(lxyz),ut(lxyz)
+c     common /ctmp1/ ur(lxyz),us(lxyz),ut(lxyz)
+      real ur(lxyz),us(lxyz),ut(lxyz)
+
+      real ur_t(lx1,ly1,lz1,lelt)
+      real us_t(lx1,ly1,lz1,lelt)
+      real ut_t(lx1,ly1,lz1,lelt)
 
       integer e
 
+      call outpost(ux,uy,uz,u,t,'gw_')
+c     call outpost(rxm1,sxm1,txm1,ux,t,'gw_')
+c     call outpost(rym1,sym1,tym1,uy,t,'gw_')
+c     call outpost(rzm1,szm1,tzm1,uz,t,'gw_')
+
+      do i=1,lx1*lx1
+         write (6,*) i,'dxm1',dxm1(i,1)
+         write (6,*) i,'dxtm1',dxtm1(i,1)
+      enddo
+
+      do i=1,lxyz
+         write (6,*) i,'u',u(i,1)
+      enddo
+
       N = nx1-1
+      write (6,*) 'N=',N
+
       do e=1,nel
          if (if3d) then
             call local_grad3(ur,us,ut,u,N,e,dxm1,dxtm1)
+            if (e.eq.1) then
+               do i=1,lxyz
+c                 write (6,*) 'ur=',ur(i)
+c                 write (6,*) 'us=',us(i)
+c                 write (6,*) 'ut=',ut(i)
+               enddo
+            endif
             do i=1,lxyz
+               ur_t(i,1,1,e) = ur(i)
+               us_t(i,1,1,e) = us(i)
+               ut_t(i,1,1,e) = ut(i)
                ux(i,e) = w3m1(i,1,1)*(ur(i)*rxm1(i,1,1,e)
      $                              + us(i)*sxm1(i,1,1,e)
      $                              + ut(i)*txm1(i,1,1,e) )
@@ -4635,7 +4667,9 @@ c
          endif
 
       enddo
-c
+
+      call outpost(ur_t,us_t,ut_t,pr,t,'gw_')
+ 
       return
       end
 c-----------------------------------------------------------------------

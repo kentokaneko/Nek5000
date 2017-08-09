@@ -30,6 +30,9 @@ c-----------------------------------------------------------------------
 !$acc enter data copyin(rxm1,sxm1,txm1)
 !$acc enter data copyin(rym1,sym1,tym1)
 !$acc enter data copyin(rzm1,szm1,tzm1)
+!$acc enter data copyin(rxm2,sxm2,txm2)
+!$acc enter data copyin(rym2,sym2,tym2)
+!$acc enter data copyin(rzm2,szm2,tzm2)
 !$acc enter data copyin(g1m1,g2m1,g3m1,g4m1,g5m1,g6m1)
 !$acc enter data copyin(cbc,bc)
 !$acc enter data copyin(abx1,aby1,abz1,abx2,aby2,abz2)
@@ -343,8 +346,15 @@ c-----------------------------------------------------------------------
       enddo
 !$acc end parallel loop 
 
-      call wgradm1_acc  (ta1,ta2,ta3,ta4,nelv)
-      call ophx_acc     (resv1,resv2,resv3,vx,vy,vz,h1,h2)
+!$acc update host(h1,h2,vx,vy,vz)
+      call outpost(vx,vy,vz,h1,h2,'gv_')
+
+c     call wgradm1_acc  (ta1,ta2,ta3,ta4,nelv)
+
+!$acc update host(vx,vy,vz)
+      call ophx_acc(resv1,resv2,resv3,vx,vy,vz,h1,h2)
+!$acc update host(vx,vy,vz,resv1,resv2,resv3)
+      call outpost(resv1,resv2,resv3,h1,h2,'gv_')
 
 !$acc parallel loop
       do i=1,n
@@ -353,6 +363,7 @@ c-----------------------------------------------------------------------
          resv3(i)=bfz(i,1,1,1)-resv3(i)-ta3(i)
       enddo
 !$acc end parallel loop 
+c     call outpost(resv1,resv2,resv3,h1,h2,'gv_')
 
 !$acc end data
 
@@ -432,7 +443,11 @@ c     OUT = (H1*A+H2*B) * INP
       include 'SIZE'
       include 'INPUT'
       include 'SOLN'
-      real out1(1),out2(1),out3(1),inp1(1),inp2(1),inp3(1),h1(1),h2(1)
+      
+      parameter (lt=lx1*ly1*lz1*lelt)
+
+      real out1(lt),out2(lt),out3(lt),inp1(lt),inp2(lt),inp3(lt),
+     $     h1(lt),h2(lt)
 
       imesh = 1
 
@@ -443,13 +458,17 @@ c     ELSE
 
 c     Later - we can make this fast
 
+!$acc update host(inp1,inp2,inp3)
+      call outpost(inp1,inp2,inp3,h1,h2,'go_')
+
+!$acc data present(inp1,inp2,inp3,h1,h2)
       call axhelm_acc(out1,inp1,h1,h2,imesh,1)
       call axhelm_acc(out2,inp2,h1,h2,imesh,2)
       call axhelm_acc(out3,inp3,h1,h2,imesh,3)
+!$acc end data
 
       return
       end
-c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine makef_acc
 c
@@ -1177,6 +1196,15 @@ c-----------------------------------------------------------------------
       real tmpr3,tmps3,tmpt3
       integer i,j,k,l,e
 
+      do i=1,lx1
+         write (6,*) 'u3=',u3(i,1,1,1)
+         write (6,*) 'd=',d(1,i)
+      enddo
+
+c     call exitti('exit before mxm$',1)
+
+!$acc update device(u3,d)
+
 !$ACC DATA PRESENT(u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t)
 !$ACC&    PRESENT(u1,u2,u3,d)
 
@@ -1229,8 +1257,11 @@ c-----------------------------------------------------------------------
       enddo
                                                                      
 !$ACC END PARALLEL LOOP
-
+!$acc update host(u3r)
 !$ACC END DATA
+
+      write (6,*) 'u3r(1,1,1,1)=',u3r(1,1,1,1)
+c     call exitti('exit after mxm$',1)
 
       return
       end
@@ -1266,10 +1297,27 @@ c
       call global_curl_grad3_acc(u1r,u1s,u1t,
      $   u2r,u2s,u2t,u3r,u3s,u3t,u1,u2,u3,dxm1)
 
+!$acc update host(rxm1,sxm1,txm1)
+!$acc update host(rym1,sym1,tym1)
+!$acc update host(rzm1,szm1,tzm1)
+
+!$acc update host(u3r)
+      do i=1,lx1*ly1*lz1
+         write (6,*) 'u3r=',u3r(i,1,1,1)
+      enddo
+
+c     call exitti('exit before outpost$',1)
+
+      call outpost(rxm1,sxm1,txm1,pr,t,'goc')
+      call outpost(rym1,sym1,tym1,pr,t,'goc')
+      call outpost(rzm1,szm1,tzm1,pr,t,'goc')
+
       call curl_acc (u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t,
      $               rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1,
      $               w1,w2,w3,jacmi)
 
+!$acc update host(w1,w2,w3)
+      call outpost(w1,w2,w3,pr,t,'goc')
 
 
       ifielt = ifield
@@ -1278,7 +1326,7 @@ c
       call dssum      (w1,nx1,ny1,nz1)
       call dssum      (w2,nx1,ny1,nz1)
       call dssum      (w3,nx1,ny1,nz1)
-      call opcolv     (w1,w2,w3,binvm1)
+      call opcolv_acc (w1,w2,w3,binvm1)
       ifield = ifielt
 
 !$ACC END DATA

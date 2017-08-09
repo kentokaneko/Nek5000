@@ -1393,7 +1393,7 @@ c     real v1(lt),v2(lt),v3(lt),vp(lt),vt(lt)
       mp=lx2*ly2*lz2*nelv
       mt=lx1*ly1*lz1*nelt
 
-!$ACC UPDATE HOST(v1(1:mv),v2(1:mv),v3(1:mv),vp(1:mp),vt(1:mt))
+ccc!$ACC UPDATE HOST(v1(1:mv),v2(1:mv),v3(1:mv),vp(1:mp),vt(1:mt))
 
       itmp=0
       if (ifto) itmp=1

@@ -237,6 +237,7 @@ c-----------------------------------------------------------------------
 !$ACC&     PRESENT (u(nx1,ny1,nz1,nelt))
 !$ACC&     PRESENT (u1(nx1,ny1,nz1,nelt),u2(nx1,ny1,nz1,nelt))
 !$ACC&     PRESENT (u3(nx1,ny1,nz1,nelt))
+
 !$ACC PARALLEL LOOP COLLAPSE(4) GANG WORKER VECTOR
 !$ACC&    PRIVATE(tmpu1,tmpu2,tmpu3)
 !dir$ NOBLOCKING
@@ -261,7 +262,9 @@ c-----------------------------------------------------------------------
          enddo
       enddo
 !$ACC END PARALLEL LOOP
+
 !$ACC END DATA
+
       return
       end
 c-----------------------------------------------------------------------
@@ -336,25 +339,45 @@ c-----------------------------------------------------------------------
 
 !$acc data present(resv1,resv2,resv3,h1,h2) create(ta1,ta2,ta3,ta4)
 !$acc& present(vdiff,qtl,pr,vtrans,vx,vy,vz,bfx,bfy,bfz)
-      call outpost(resv1,resv2,resv3,h1,h2,'gv_')
 
 !$acc parallel loop 
       do i=1,n
-         ta4(i)=vdiff (i,1,1,1,1)*qtl(i,1,1,1)+scale*pr(i,1,1,1)
+         ta4(i)=scale*(vdiff(i,1,1,1,1)*qtl(i,1,1,1))+pr(i,1,1,1)
          h1 (i)=vdiff (i,1,1,1,1)
          h2 (i)=vtrans(i,1,1,1,1)*dtbd
       enddo
 !$acc end parallel loop 
 
-!$acc update host(h1,h2,vx,vy,vz)
-      call outpost(vx,vy,vz,h1,h2,'gv_')
+!$acc update host(h2)
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'h2=',h2(i)
+      enddo
+c     stop
 
-c     call wgradm1_acc  (ta1,ta2,ta3,ta4,nelv)
-
-!$acc update host(vx,vy,vz)
       call ophx_acc(resv1,resv2,resv3,vx,vy,vz,h1,h2)
-!$acc update host(vx,vy,vz,resv1,resv2,resv3)
-      call outpost(resv1,resv2,resv3,h1,h2,'gv_')
+c!$acc update host(resv1,resv2,resv3)
+
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'resv1=',resv1(i)
+c        write (6,*) 'resv2=',resv2(i)
+c        write (6,*) 'resv3=',resv3(i)
+      enddo
+c     stop
+
+!$acc update host(ta4)
+      do i=1,lx1*ly1*lz1
+         write (6,*) 'ta4=',ta4(i)
+      enddo
+
+      call wgradm1_acc(ta1,ta2,ta3,ta4,nelv)
+
+!$acc update host(ta1,ta2,ta3)
+      do i=1,lx1*ly1*lz1
+         write (6,*) 'ta1=',ta1(i)
+         write (6,*) 'ta2=',ta2(i)
+         write (6,*) 'ta3=',ta3(i)
+      enddo
+      stop
 
 !$acc parallel loop
       do i=1,n
@@ -363,7 +386,14 @@ c     call wgradm1_acc  (ta1,ta2,ta3,ta4,nelv)
          resv3(i)=bfz(i,1,1,1)-resv3(i)-ta3(i)
       enddo
 !$acc end parallel loop 
-c     call outpost(resv1,resv2,resv3,h1,h2,'gv_')
+
+!$acc update host(resv1,resv2,resv3)
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'resv1=',resv1(i)
+c        write (6,*) 'resv2=',resv2(i)
+c        write (6,*) 'resv3=',resv3(i)
+      enddo
+c     stop
 
 !$acc end data
 
@@ -391,9 +421,10 @@ c
 !$acc data present(rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
 !$acc& present(dxm1,w3m1,ux,uy,uz,u) create(ur,us,ut)
 
-!$acc parallel loop gang
+c!$acc parallel loop gang
+!$acc kernels
       do e=1,nel
-!$acc    loop collapse(3) vector private(w1,w2,w3) 
+ccc!$acc    loop collapse(3) vector private(w1,w2,w3) 
          do k=1,lz1
          do j=1,ly1
          do i=1,lx1
@@ -413,7 +444,7 @@ c
          enddo
          enddo
          enddo
-!$acc    end loop
+ccc!$acc    end loop
 
 !$acc    loop vector
          do i=1,lxyz
@@ -429,20 +460,21 @@ c
          enddo
 !$acc    end loop
       enddo
-!$acc end parallel loop
+c!$acc end parallel loop
+!$acc end kernels
 
 !$acc end data
 
       return
       end
 c-----------------------------------------------------------------------
-      subroutine ophx_acc (out1,out2,out3,inp1,inp2,inp3,h1,h2)
+      subroutine ophx_acc(out1,out2,out3,inp1,inp2,inp3,h1,h2)
 
 c     OUT = (H1*A+H2*B) * INP  
 
       include 'SIZE'
-      include 'INPUT'
-      include 'SOLN'
+c     include 'INPUT'
+c     include 'SOLN'
       
       parameter (lt=lx1*ly1*lz1*lelt)
 
@@ -458,14 +490,19 @@ c     ELSE
 
 c     Later - we can make this fast
 
-!$acc update host(inp1,inp2,inp3)
-      call outpost(inp1,inp2,inp3,h1,h2,'go_')
 
 !$acc data present(inp1,inp2,inp3,h1,h2)
       call axhelm_acc(out1,inp1,h1,h2,imesh,1)
       call axhelm_acc(out2,inp2,h1,h2,imesh,2)
       call axhelm_acc(out3,inp3,h1,h2,imesh,3)
 !$acc end data
+
+!$acc update host(out3)
+
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'out3=',out3(i)
+      enddo
+c     stop
 
       return
       end
@@ -490,7 +527,12 @@ c
       call chck('abb')
       call makeuf_acc    ! paul and som
       call chck('bbb')
-      call advab_acc
+c     call advab_acc
+
+!$acc update host(bfx,bfy,bfz)
+      call advab
+!$acc update device(bfx,bfy,bfz)
+
       call chck('cbb')
       call makeabf_acc
       call chck('dbb')
@@ -568,6 +610,9 @@ C---------------------------------------------------------------
      $   , ta2 (lx1*ly1*lz1*lelv)
      $   , ta3 (lx1*ly1*lz1*lelv)
 
+ccc!$acc update host(bfx,bfy,bfz)
+c     call outpost(bfx,bfy,bfz,pr,t,'gad')
+c     call exitti('exit at beginning of advab_acc$',1)
 
 !$acc data create(ta1,ta2,ta3) present(vx,vy,vz,bfx,bfy,bfz,bm1)
 
@@ -579,6 +624,9 @@ C---------------------------------------------------------------
       call convop_acc  (ta2,vy)
       call chck('c11')
       call convop_acc  (ta3,vz)
+!$acc update host(vx,vy,vz,ta3)
+      call outpost(vx,vy,vz,ta3,t,'gad')
+      call exitti('exit at beginning of advab_acc$',1)
       call chck('d11')
 
 !$acc parallel loop
@@ -1196,10 +1244,15 @@ c-----------------------------------------------------------------------
       real tmpr3,tmps3,tmpt3
       integer i,j,k,l,e
 
+      tempo = 0.0
+
       do i=1,lx1
          write (6,*) 'u3=',u3(i,1,1,1)
          write (6,*) 'd=',d(1,i)
+         tempo=tempo+u3(i,1,1,1)*d(1,i)
       enddo
+
+      write (6,*) 'u3r(1,1,1,1)=',tempo
 
 c     call exitti('exit before mxm$',1)
 
@@ -1302,23 +1355,34 @@ c
 !$acc update host(rzm1,szm1,tzm1)
 
 !$acc update host(u3r)
-      do i=1,lx1*ly1*lz1
+      do i=1,16
          write (6,*) 'u3r=',u3r(i,1,1,1)
       enddo
 
 c     call exitti('exit before outpost$',1)
 
-      call outpost(rxm1,sxm1,txm1,pr,t,'goc')
-      call outpost(rym1,sym1,tym1,pr,t,'goc')
-      call outpost(rzm1,szm1,tzm1,pr,t,'goc')
+c     call outpost(rxm1,sxm1,txm1,pr,t,'goc')
+c     call outpost(rym1,sym1,tym1,pr,t,'goc')
+c     call outpost(rzm1,szm1,tzm1,pr,t,'goc')
 
       call curl_acc (u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t,
      $               rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1,
      $               w1,w2,w3,jacmi)
 
-!$acc update host(w1,w2,w3)
-      call outpost(w1,w2,w3,pr,t,'goc')
+!$acc update host(w1,w2,w3,u3r)
 
+      do i=1,16
+         write (6,*) 'u3r=',u3r(i,1,1,1)
+      enddo      
+      call exitti('end after u3r$',1)
+      
+c     call outpost(w1,w2,w3,pr,t,'goc')
+
+      do i=1,16
+         write (6,*) 'w1=',w1(i)
+         write (6,*) 'w2=',w2(i)
+         write (6,*) 'w3=',w3(i)
+      enddo      
 
       ifielt = ifield
       ifield = 1
@@ -1363,107 +1427,4 @@ c-----------------------------------------------------------------------
       endif
       return
       END
-c-----------------------------------------------------------------------
-      subroutine chk2(s3,a)
-      include 'SIZE'
-      character*3 s3
-      parameter (lt=lx1*ly1*lz1*lelt)
-      real a(lt)
-
-      n=nx1*ny1*nz1*nelt
-
-      amx=glamax_acc(a,n)
-      ams=glasum_acc(a,n)
-
-      write(6,*) s3,   ' dev  max ',amx
-      write(6,*) '   ','      sum ',ams
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine chk3(s3,a)
-      include 'SIZE'
-      character*3 s3
-
-      parameter (lt=lx1*ly1*lz1*lelt)
-      real a(lt)
-
-      n=nx1*ny1*nz1*nelt
-
-      amx=glamax(a,n)
-      ams=glasum(a,n)
-
-      write(6,*) s3,   ' host max ',amx
-      write(6,*) '   ','      sum ',ams
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine chk2n(s4,a,n)
-      include 'SIZE'
-      include 'TOTAL'
-      character*4 s4
-
-      integer icalld
-      save    icalld
-      data    icalld /0/
-
-      real a(n)
-
-      icalld = icalld+1
-
-      write(6,*) istep,icalld,n   ,' ',s4,'  chk2n aaa'
-      write(6,*) istep,icalld,a(1),' ',s4,'  chk2n aa2'
-
-      amx=glamax_acc(a,n)
-      ams=glasum_acc(a,n)
-
-      write(6,*) s4,     ' dev  max ',amx,'  chk2n aa3'
-      write(6,*) '    ', '      sum ',ams,'  chk2n aa4'
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine chk3n(s4,a,n)
-      include 'SIZE'
-      character*4 s4
-
-      real a(n)
-
-      amx=glamax(a,n)
-      ams=glasum(a,n)
-
-      write(6,*) s4,     ' host max ',amx
-      write(6,*) '    ', '      sum ',ams
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine chk4(s4,a,n1)
-      include 'SIZE'
-
-      real a(n1,n1,n1,nelv)
-      integer e
-      character*4 s4
-
-      do e = 1,nelv
-         max = glamax_acc(a(1,1,1,e),n1**3)
-         if (e.eq.1) then
-            write (6,*) s4,    ' e=',e,' max=',max
-         else
-            write (6,*) '    ',' e=',e,' max=',max
-         endif
-      enddo
-
-      do e = 1,nelv
-         sum = glasum_acc(a(1,1,1,e),n1**3)
-         if (e.eq.1) then
-            write (6,*) s4,    ' e=',e,' sum=',sum
-         else
-            write (6,*) '    ',' e=',e,' sum=',sum
-         endif
-      enddo
-
-      return
-      end
 c-----------------------------------------------------------------------

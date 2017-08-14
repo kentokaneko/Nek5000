@@ -562,7 +562,20 @@ c
       naxhm=icalld
       etime1=dnekclock()
 
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'helm2=',helm2(i)
+      enddo
+c     stop
+
+!$acc update host(helm1,helm2)
       if (.not.ifsolv) call setfast(helm1,helm2,imesh)
+!$acc update device(helm1,helm2)
+      if (ifh2) then
+c        write (6,*) 'ifh2 = .true.'
+      else
+c        write (6,*) 'ifh2 = .false.'
+      endif
+c     stop
 
 c
       if (ifaxis) call setaxdy ( ifrzer(e) )
@@ -693,12 +706,17 @@ c
 
 c
 c
-      if (ifh2) then
+
 !call addcol4 (au,helm2,bm1,u,ntot)
+
+      if (ifh2) then
+!$acc parallel loop gang vector
          do i=1,ntot
             au(i) = au(i) + helm2(i)*bm1(i,1,1,1)*u(i)
          enddo
+!$acc end parallel
       endif
+
 !$ACC END DATA
 c
 c     if axisymmetric, add a diagonal term in the radial direction (isd=2)

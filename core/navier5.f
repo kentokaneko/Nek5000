@@ -705,24 +705,7 @@ c
       m1 = N+1
       m2 = m1*m1
 c
-
-      if (e.eq.1) then
-c        call outpost(u,u,u,u,u,'glg')
-         do i=1,m2
-c           write (6,*) 'D=',D(i)
-         enddo
-         do i=0,m1*m2-1
-c           write (6,*) 'u=',u(i,0,0,e)
-         enddo
-      endif
-
       call mxm(D ,m1,u(0,0,0,e),m1,ur,m2)
-
-      if (e.eq.1) then
-         do i=1,m1*m2
-c           write (6,*) 'ur=',ur(i)
-         enddo
-      endif
 
       do k=0,N
          call mxm(u(0,0,k,e),m1,Dt,m1,us(0,0,k),m1)

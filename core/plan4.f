@@ -52,9 +52,8 @@ C
          call plan4_acc_data_copyin()
 c        call outpost(vx,vy,vz,pr,t,'g_1')
          if (istep.eq.1) call hsmg_acc_data_copyin()
-c        call makef_acc
-         call makef
-!$acc update device(bfx,bfy,bfz)
+         call makef_acc
+
 c        call outpost(bfx,bfy,bfz,pr,t,'g_2')
 
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
@@ -84,63 +83,54 @@ C        first, compute pressure
          etime1=dnekclock()
 
 !$ACC ENTER DATA COPYIN(h1,h2,respr,pmask,res1,res2,res3)
-c        call outpost(h1,h2,respr,pr,t,'g_3')
-
          call crespsp_acc(respr)
-         call exitti('exit after crespsp_acc$',1)
+
+!$acc update host(respr)
+         do i=1,lx1*ly1*lz1
+            write (6,*) 'respr=',respr(i,1,1,1)
+         enddo
+         stop
 
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
          call ctolspl_acc(tolspl,respr)
 
-!$ACC UPDATE HOST(h1,h2,respr)
-c        call outpost(h1,h2,respr,pr,t,'g__')
-
-         call chk3('t81',respr)
          call dssum     (respr,nx1,ny1,nz1)
-         call chk3('t9 ',respr)
-
          call col2_acc  (respr,pmask,n)
          call hmh_gmres (respr,h1,h2,vmult,nmxh)
 
-!$ACC UPDATE HOST(h1,h2,respr)
-
-c        call outpost(h1,h2,respr,pr,t,'g__')
-
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
-
-!$ACC UPDATE HOST(pr)
-c        call outpost(h1,h2,respr,pr,t,'g__')
-!$ACC EXIT DATA 
-
-         call chk3('u4:',pr)
-         call chk3('u4:',h1)
-         call chk3('u4:',h2)
-
-c        call outpost(h1,h2,dpr,pr,t,'g__')
-
          tpres=tpres+(dnekclock()-etime1)
 
-!$acc update host(h1,h2)
-         call cresvsp(res1,res2,res3,h1,h2)
-!$acc update device(res1,res2,res3,h1,h2)
+         call cresvsp_acc(res1,res2,res3,h1,h2)
 
-         call outpost(res2,res2,res3,h1,h2,'g__')
-         call exitti('exit after cresvsp_acc$',1)
+!$acc update host(res1,res2,res3)
+         do i=1,lx1*ly1*lz1
+            write (6,*) 'res1=',res1(i,1,1,1)
+            write (6,*) 'res2=',res2(i,1,1,1)
+            write (6,*) 'res3=',res3(i,1,1,1)
+         enddo
+c        stop
 
+!$acc update host(res1,res2,res3,h1,h2)
          call ophinv_pr(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
+
+         do i=1,lx1*ly1*lz1
+            write (6,*) 'dv1=',dv1(i,1,1,1)
+            write (6,*) 'dv2=',dv2(i,1,1,1)
+            write (6,*) 'dv3=',dv3(i,1,1,1)
+         enddo
+         stop
 
 c below gives correct values in iterations
 c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310  
 
-!$ACC DATA COPY(vx,vy,vz,dv1,dv2,dv3)
+!$acc update device(dv1,dv2,dv3)
          call add2_acc  (vx,dv1,n)      
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
-!$ACC END DATA 
-
-c        call outpost(vx,vy,vz,pr,t,'g__')
+!$acc exit data
 
          IF (NIO.EQ.0) THEN
             WRITE(6,'(13X,A,1p2e13.4)')
@@ -500,12 +490,28 @@ c     call outpost(resv1,resv2,resv3,h1,h2,'gv_')
 
       call col3(ta4,vdiff,qtl,ntot)
 
-      call outpost(ta4,vdiff,qtl,pr,t,'gv_')
+      do i=1,ntot/nelv
+c        write (6,*) 'pr=',pr(i,1,1,1)
+      enddo
+
+c     call outpost(ta4,vdiff,qtl,pr,t,'gv_')
       call add2s1 (ta4,pr,scale,ntot)    
 
-      call outpost(ta4,vdiff,qtl,pr,t,'gv_')
-      call opgrad (ta1,ta2,ta3,ta4)
-      call outpost(ta1,ta2,ta3,ta4,t,'gv_')
+      call outpost(resv1,resv2,resv3,ta4,h2,'gcv')
+c     call opgrad (ta1,ta2,ta3,ta4)
+      do i=1,ntot/nelv
+         write (6,*) 'ta4=',ta4(i,1,1,1)
+      enddo
+      call wgradm1(ta1,ta2,ta3,ta4,nelv)
+c     call exitti('exit after wgradm1 in cresvsp$',1)
+      call outpost(ta1,ta2,ta3,ta4,h2,'gcv')
+
+      do i=1,ntot/nelv
+         write (6,*) 'ta1=',ta1(i,1,1,1)
+         write (6,*) 'ta2=',ta2(i,1,1,1)
+         write (6,*) 'ta3=',ta3(i,1,1,1)
+      enddo
+
       if(IFAXIS) then
          CALL COL2 (TA2, OMASK,NTOT)
          CALL COL2 (TA3, OMASK,NTOT)
@@ -533,14 +539,14 @@ c-----------------------------------------------------------------------
       ntot  = nx1*ny1*nz1*nelv
       nxyz  = nx1*ny1*nz1
 
-!$acc update host   (u1(1:ntot),u2(1:ntot),u3(1:ntot))
+ccc!$acc update host   (u1(1:ntot),u2(1:ntot),u3(1:ntot))
 
 c     work1=dw/dy ; work2=dv/dz
-        call dudxyz(work1,u3,rym1,sym1,tym1,jacm1,1,2)
-        if (if3d) then
-           call dudxyz(work2,u2,rzm1,szm1,tzm1,jacm1,1,3)
-           call sub3(w1,work1,work2,ntot)
-        else
+      call dudxyz(work1,u3,rym1,sym1,tym1,jacm1,1,2)
+      if (if3d) then
+         call dudxyz(work2,u2,rzm1,szm1,tzm1,jacm1,1,3)
+         call sub3(w1,work1,work2,ntot)
+      else
            call copy(w1,work1,ntot)
 
            if(ifaxis) then
@@ -572,23 +578,24 @@ c     work1=dv/dx ; work2=du/dy
         call dudxyz(work2,u1,rym1,sym1,tym1,jacm1,1,2)
         call sub3(w3,work1,work2,ntot)
 
-
-!$acc update device(w1(1:ntot),w2(1:ntot),w3(1:ntot))
-
       if (ifavg .and. .not. ifcyclic) then ! average between elements
 
          ifielt = ifield
          ifield = 1
-       
-         call opcolv_acc(w1,w2,w3,bm1)
+
+         call opcolv(w1,w2,w3,bm1)
+
+!$acc update device(w1(1:ntot),w2(1:ntot),w3(1:ntot))
          call dssum   (w1,nx1,ny1,nz1)
          call dssum   (w2,nx1,ny1,nz1)
          call dssum   (w3,nx1,ny1,nz1)
-         call opcolv_acc(w1,w2,w3,binvm1)
+!$acc update host(w1(1:ntot),w2(1:ntot),w3(1:ntot))
+         call opcolv(w1,w2,w3,binvm1)
 
          ifield = ifielt
 
       endif
+
 
       return
       end
@@ -907,54 +914,78 @@ c
 !$ACC ENTER DATA CREATE (ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
 c     -mu*curl(curl(v))
 
-!$acc update host(vx_e,vy_e,vz_e)
-      call outpost(vx_e,vy_e,vz_e,pr,t,'gcp')
-c     call op_curl  (ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
-c     call op_curl  (wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
-      call op_curl_acc(ta1,ta2,ta3,vx_e,vy_e,vz_e)
-      call op_curl_acc(wa1,wa2,wa3,ta1,ta2,ta3)
-!$acc update host(ta1,ta2,ta3,wa1,wa2,wa3)
-      call outpost  (ta1,ta2,ta3,pr,t,'gcp')
-      call outpost  (wa1,wa2,wa3,pr,t,'gcp')
-c     call exitti('quit after op_curl2$',nelv)
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'ta1=',ta1(i,1,1,1)
+c        write (6,*) 'ta2=',ta2(i,1,1,1)
+c        write (6,*) 'ta3=',ta3(i,1,1,1)
+      enddo      
 
-      ! No support for lowmach
-      !call wgradm1_acc (ta1,ta2,ta3,qtl,nelt)
-!$ACC UPDATE HOST(ta1,ta2,ta3)
-      call opgrad(ta1,ta2,ta3,qtl)
-!$ACC UPDATE DEVICE(ta1,ta2,ta3)
-      call opcolv_acc   (wa1,wa2,wa3,bm1)
+      call op_curl(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
+      call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+!$acc update device(wa1,wa2,wa3)
+
+      call opcolv_acc(wa1,wa2,wa3,bm1)
+      call wgradm1(ta1,ta2,ta3,qtl,nelv)
+!$acc update device(ta1,ta2,ta3)
+
+      do i=1,16
+c        write (6,*) 'ta1=',ta1(i,1,1,1)
+c        write (6,*) 'ta2=',ta2(i,1,1,1)
+c        write (6,*) 'ta3=',ta3(i,1,1,1)
+      enddo      
 
       scale = -4./3. 
       call opadd2cm_acc(wa1,wa2,wa3,ta1,ta2,ta3,scale)
+
+!$acc update host(wa1,wa2,wa3)
+      do i=1,16
+c        write (6,*) 'wa1=',wa1(i)
+c        write (6,*) 'wa2=',wa2(i)
+c        write (6,*) 'wa3=',wa3(i)
+      enddo      
 
 c compute stress tensor for ifstrs formulation - variable viscosity Pn-Pn
       if (ifstrs) 
      $   call exitti('ifstrs not yet support on gpu$',nelv)
 
-!$acc update device (vdiff,vtrans)
-
-c     call outpost  (w1,vdiff,vtrans,pr,t,'gc3')
-
-      call invcol3_acc  (w1,vdiff,vtrans,ntot1)
-c     call outpost  (wa1,wa2,wa3,w1,t,'gc4')
+      call invcol3_acc(w1,vdiff,vtrans,ntot1)
       call opcolv_acc   (wa1,wa2,wa3,w1)
+
+!$acc update host(wa1,wa2,wa3,w1)
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'w1=',w1(i,1,1)
+c        write (6,*) 'wa1=',wa1(i)
+c        write (6,*) 'wa2=',wa2(i)
+c        write (6,*) 'wa3=',wa3(i)
+      enddo      
 
 c     add old pressure term because we solve for delta p 
 
       call invers2_acc (ta1,vtrans,ntot1)
       call rzero_acc   (ta2,ntot1)
 
+!$acc update host(ta1)
+
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'ta1=',ta1(i,1,1,1)
+      enddo      
+
 !$acc update host  (pr)
       call bcdirsc (pr)
 !$acc update device(pr)
 
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'pr=',pr(i,1,1,1)
+      enddo
+
       call axhelm_acc  (respr,pr,ta1,ta2,1,1)
+
       call chsign_acc  (respr,ntot1)
+
 
 c     call outpost  (respr,bfx,bfy,bfz,vtrans,'gc5')
 
-      write (6,*) 'after chsign_acc'
+c     write (6,*) 'after chsign_acc'
 
 c     call outpost  (ta1,wa2,ta3,pr,respr,'   ')
 c     call exitti('quit after axhelm$',nelv)
@@ -985,12 +1016,20 @@ c     call outpost(bm1,binvm1,wa1,wa2,wa3,'gc_')
       enddo
 !$acc end parallel
 
+c     write (6,*) 'test'
+
+!$acc update host(ta1,ta2,ta3)
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'ta1=',ta1(i,1,1,1)
+c        write (6,*) 'ta2=',ta2(i,1,1,1)
+c        write (6,*) 'ta3=',ta3(i,1,1,1)
+      enddo
+
 !$acc update host(ta1,ta2,ta3,respr,t)
 c     call outpost  (ta1,ta2,ta3,respr,t,'gc_')
 
       dtbd = bd(1)/dt  !! FOR NOW, no QTL support (pff, 7/31/17)
 c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
-c     call outpost(ta1,ta2,ta3,respr,t,'gc_')
 
 cc******************************************
 ccccc!$acc parallel loop gang
@@ -1049,25 +1088,27 @@ cc******************************************
             respr(i,1,1,1) = respr(i,1,1,1)+wa1(i)+wa2(i)
          enddo
       endif
-
-c     call outpost(wa1,wa2,wa3,respr,t,'gc_')
-
 !$acc update device(respr,ta1,ta2,ta3,w1,w2,w3)
+
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'respr=',respr(i,1,1,1)
+      enddo
 
       call crespsp_face_update(respr,ta1,ta2,ta3,dtbd,w1,w2,w3)
 
-c     call exitti('quit after face update$',nelv)
-
-c     call outpost(ta1,ta2,ta3,respr,t,'gc_')
-
-c     call outpost  (respr,bm1,wa1,wa2,t,'gc7')
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'respr=',respr(i,1,1,1)
+      enddo
 
 C     Orthogonalize to (1,1,...,1)T for all-Dirichlet case
-!$acc update host(respr)
-
-c     call outpost  (ta1,ta2,ta3,respr,t,'gc_')
 
       call ortho_acc (respr)
+
+!$acc update host(respr)
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'respr=',respr(i,1,1,1)
+      enddo
+c     stop
 
 !$acc exit data
 

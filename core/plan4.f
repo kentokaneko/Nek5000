@@ -17,7 +17,7 @@ c
       INCLUDE 'TSTEP'
       INCLUDE 'ORTHOP'
       INCLUDE 'CTIMER'
-C
+
       COMMON /SCRNS/ RES1  (LX1,LY1,LZ1,LELV)
      $ ,             RES2  (LX1,LY1,LZ1,LELV)
      $ ,             RES3  (LX1,LY1,LZ1,LELV)
@@ -27,7 +27,7 @@ C
      $ ,             RESPR (LX2,LY2,LZ2,LELV)
       common /scrvh/ h1    (lx1,ly1,lz1,lelv)
      $ ,             h2    (lx1,ly1,lz1,lelv)
- 
+
       REAL           DPR   (LX2,LY2,LZ2,LELV)
       EQUIVALENCE   (DPR,DV1)
       LOGICAL        IFSTSP
@@ -47,14 +47,13 @@ C
       ntot1  = nx1*ny1*nz1*nelv
       n      = ntot1
 
-
       if (igeom.eq.1) then
          call plan4_acc_data_copyin()
-c        call outpost(vx,vy,vz,pr,t,'g_1')
          if (istep.eq.1) call hsmg_acc_data_copyin()
          call makef_acc
 
-c        call outpost(bfx,bfy,bfz,pr,t,'g_2')
+c        call outpost(bfx,bfy,bfz,pr,t,'gp4')
+c        stop
 
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
          call sumab_acc(vy_e,vy,vylag,n,ab,nab)
@@ -66,7 +65,6 @@ c        call outpost(bfx,bfy,bfz,pr,t,'g_2')
 
 
          call lagvel_acc
-
 
          ! mask Dirichlet boundaries
 !$acc update host(vx,vy,vz,v1mask,v2mask,v3mask)
@@ -83,13 +81,15 @@ C        first, compute pressure
          etime1=dnekclock()
 
 !$ACC ENTER DATA COPYIN(h1,h2,respr,pmask,res1,res2,res3)
+c!$acc data create(h1,h2,respr,res1,res2,res3) 
+c!$acc update device(pmask)
          call crespsp_acc(respr)
 
-!$acc update host(respr)
-         do i=1,lx1*ly1*lz1
-            write (6,*) 'respr=',respr(i,1,1,1)
+c!$acc update host(respr)
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'respr=',respr(i,1,1,1)
          enddo
-         stop
+c        stop
 
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
@@ -101,20 +101,15 @@ C        first, compute pressure
 
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
+
          tpres=tpres+(dnekclock()-etime1)
 
          call cresvsp_acc(res1,res2,res3,h1,h2)
 
-!$acc update host(res1,res2,res3)
-         do i=1,lx1*ly1*lz1
-            write (6,*) 'res1=',res1(i,1,1,1)
-            write (6,*) 'res2=',res2(i,1,1,1)
-            write (6,*) 'res3=',res3(i,1,1,1)
-         enddo
-c        stop
-
 !$acc update host(res1,res2,res3,h1,h2)
-         call ophinv_pr(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
+c        call ophinv_pr_debug(dv1,dv2,dv3,res1,res2,res3,
+c    $                        h1,h2,tolhv,nmxh)
+         call ophinv_pr_acc(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
 
          do i=1,lx1*ly1*lz1
             write (6,*) 'dv1=',dv1(i,1,1,1)
@@ -238,7 +233,9 @@ C        first, compute pressure
 
 C        Compute velocity
          call cresvsp (res1,res2,res3,h1,h2)
-         call ophinv_pr(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
+c        call ophinv_pr(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
+         call ophinv_pr_debug(dv1,dv2,dv3,res1,res2,res3,
+     $                        h1,h2,tolhv,nmxh)
          call opadd2  (vx,vy,vz,dv1,dv2,dv3)
 
          if (ifexplvis) call redo_split_vis
@@ -911,22 +908,30 @@ c
       ntot1  = nxyz1*nelv
       nfaces = 2*ndim
 
-!$ACC ENTER DATA CREATE (ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
+!$ACC ENTER DATA CREATE(ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
 c     -mu*curl(curl(v))
-
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'ta1=',ta1(i,1,1,1)
-c        write (6,*) 'ta2=',ta2(i,1,1,1)
-c        write (6,*) 'ta3=',ta3(i,1,1,1)
-      enddo      
 
       call op_curl(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
       call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
 !$acc update device(wa1,wa2,wa3)
+c     call outpost(wa1,wa2,wa3,pr,t,'gcp')
+      do i=1,ntot1
+c        write (6,*) 'wa1=',wa1(i)
+c        write (6,*) 'wa2=',wa2(i)
+c        write (6,*) 'wa3=',wa3(i)
+      enddo
+c     stop
 
       call opcolv_acc(wa1,wa2,wa3,bm1)
-      call wgradm1(ta1,ta2,ta3,qtl,nelv)
-!$acc update device(ta1,ta2,ta3)
+      call wgradm1_acc(ta1,ta2,ta3,qtl,nelv)
+!$acc update host(ta1,ta2,ta3)
+
+      do i=1,ntot1
+c        write (6,*) 'ta1=',ta1(i)
+c        write (6,*) 'ta2=',ta2(i)
+c        write (6,*) 'ta3=',ta3(i)
+      enddo
+c     stop
 
       do i=1,16
 c        write (6,*) 'ta1=',ta1(i,1,1,1)

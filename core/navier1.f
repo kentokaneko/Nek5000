@@ -5216,3 +5216,37 @@ c
       return
       end
 c-----------------------------------------------------------------------
+      subroutine ophinv_debug(out1,out2,out3,inp1,inp2,inp3,
+     $                        h1,h2,tolh,nmxi)
+C----------------------------------------------------------------------
+C
+C     OUT = (H1*A+H2*B)-1 * INP  (implicit)
+C
+C----------------------------------------------------------------------
+      include 'SIZE'
+      include 'INPUT'
+      include 'SOLN'
+      include 'TSTEP'
+      REAL OUT1 (LX1,LY1,LZ1,1)
+      REAL OUT2 (LX1,LY1,LZ1,1)
+      REAL OUT3 (LX1,LY1,LZ1,1)
+      REAL INP1 (LX1,LY1,LZ1,1)
+      REAL INP2 (LX1,LY1,LZ1,1)
+      REAL INP3 (LX1,LY1,LZ1,1)
+      REAL H1   (LX1,LY1,LZ1,1)
+      REAL H2   (LX1,LY1,LZ1,1)
+
+      IMESH = 1
+
+      call hmholtz_debug('VELX',OUT1,INP1,H1,H2,V1MASK,VMULT,
+     $                                      IMESH,TOLH,NMXI,1)
+
+      call hmholtz_debug('VELY',OUT2,INP2,H1,H2,V2MASK,VMULT,
+     $                                      IMESH,TOLH,NMXI,2)
+
+      call hmholtz_debug('VELZ',OUT3,INP3,H1,H2,V3MASK,VMULT,
+     $                                      IMESH,TOLH,NMXI,3)
+
+      return
+      END
+c-----------------------------------------------------------------------

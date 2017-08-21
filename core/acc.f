@@ -43,6 +43,7 @@ c-----------------------------------------------------------------------
 !$acc enter data copyin(pr,prlag,qtl,usrdiv)
 !$acc enter data copyin(vtrans,vdiff)
 !$acc enter data copyin(param,nelfld)
+!$acc enter data copyin(vxd,vyd,vzd)
 
 !$acc   enter data create (ibc_acc)
 
@@ -354,6 +355,14 @@ c        write (6,*) 'h2=',h2(i)
       enddo
 c     stop
 
+!$acc update host(vx,vy,vz)
+      do i=1,n
+c        write (6,*) 'vx=',vx(i,1,1,1)
+c        write (6,*) 'vy=',vy(i,1,1,1)
+c        write (6,*) 'vz=',vz(i,1,1,1)
+      enddo
+c     stop
+
       call ophx_acc(resv1,resv2,resv3,vx,vy,vz,h1,h2)
 c!$acc update host(resv1,resv2,resv3)
 
@@ -365,19 +374,28 @@ c        write (6,*) 'resv3=',resv3(i)
 c     stop
 
 !$acc update host(ta4)
-      do i=1,lx1*ly1*lz1
-         write (6,*) 'ta4=',ta4(i)
+      do i=1,lx1*ly1*lz1*nelv
+c        write (6,*) 'ta4=',ta4(i)
       enddo
+c     stop
 
       call wgradm1_acc(ta1,ta2,ta3,ta4,nelv)
 
-!$acc update host(ta1,ta2,ta3)
-      do i=1,lx1*ly1*lz1
-         write (6,*) 'ta1=',ta1(i)
-         write (6,*) 'ta2=',ta2(i)
-         write (6,*) 'ta3=',ta3(i)
+c!$acc update host(ta1,ta2,ta3)
+      do i=1,lx1*ly1*lz1*nelv
+c        write (6,*) 'ta1=',ta1(i)
+c        write (6,*) 'ta2=',ta2(i)
+c        write (6,*) 'ta3=',ta3(i)
       enddo
-      stop
+c     stop
+
+c!$acc update host(resv1,resv2,resv3)
+      do i=1,lx1*ly1*lz1
+c        write (6,*) 'resv1=',resv1(i)
+c        write (6,*) 'resv2=',resv2(i)
+c        write (6,*) 'resv3=',resv3(i)
+      enddo
+c     stop
 
 !$acc parallel loop
       do i=1,n
@@ -387,8 +405,8 @@ c     stop
       enddo
 !$acc end parallel loop 
 
-!$acc update host(resv1,resv2,resv3)
-      do i=1,lx1*ly1*lz1
+c!$acc update host(resv1,resv2,resv3)
+      do i=1,lx1*ly1*lz1*nelv
 c        write (6,*) 'resv1=',resv1(i)
 c        write (6,*) 'resv2=',resv2(i)
 c        write (6,*) 'resv3=',resv3(i)
@@ -419,12 +437,11 @@ c
       integer e,q
 
 !$acc data present(rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1)
-!$acc& present(dxm1,w3m1,ux,uy,uz,u) create(ur,us,ut)
+!$acc& present(dxm1,w3m1,ux,uy,uz,u)
 
-c!$acc parallel loop gang
-!$acc kernels
+!$acc parallel loop gang private(ur,us,ut)
       do e=1,nel
-ccc!$acc    loop collapse(3) vector private(w1,w2,w3) 
+!$acc    loop collapse(3) vector private(w1,w2,w3) 
          do k=1,lz1
          do j=1,ly1
          do i=1,lx1
@@ -444,7 +461,7 @@ ccc!$acc    loop collapse(3) vector private(w1,w2,w3)
          enddo
          enddo
          enddo
-ccc!$acc    end loop
+!$acc    end loop
 
 !$acc    loop vector
          do i=1,lxyz
@@ -460,8 +477,7 @@ ccc!$acc    end loop
          enddo
 !$acc    end loop
       enddo
-c!$acc end parallel loop
-!$acc end kernels
+!$acc end parallel loop
 
 !$acc end data
 
@@ -497,9 +513,9 @@ c     Later - we can make this fast
       call axhelm_acc(out3,inp3,h1,h2,imesh,3)
 !$acc end data
 
-!$acc update host(out3)
+c!$acc update host(out3)
 
-      do i=1,lx1*ly1*lz1
+      do i=1,lx1*ly1*lz1*nelv
 c        write (6,*) 'out3=',out3(i)
       enddo
 c     stop
@@ -527,12 +543,7 @@ c
       call chck('abb')
       call makeuf_acc    ! paul and som
       call chck('bbb')
-c     call advab_acc
-
-!$acc update host(bfx,bfy,bfz)
-      call advab
-!$acc update device(bfx,bfy,bfz)
-
+      call advab_acc
       call chck('cbb')
       call makeabf_acc
       call chck('dbb')
@@ -605,216 +616,48 @@ C---------------------------------------------------------------
       include 'SOLN'
       include 'MASS'
       include 'TSTEP'
+      include 'DEALIAS'
 
       real ta1 (lx1*ly1*lz1*lelv)
      $   , ta2 (lx1*ly1*lz1*lelv)
      $   , ta3 (lx1*ly1*lz1*lelv)
 
-ccc!$acc update host(bfx,bfy,bfz)
-c     call outpost(bfx,bfy,bfz,pr,t,'gad')
-c     call exitti('exit at beginning of advab_acc$',1)
-
 !$acc data create(ta1,ta2,ta3) present(vx,vy,vz,bfx,bfy,bfz,bm1)
 
       n = lx1*ly1*lz1*nelv
 
+!$acc update host(vxd,vyd,vzd)
       call chck('a11')
-      call convop_acc  (ta1,vx)
+      call convop_acc(ta1,vx)
       call chck('b11')
-      call convop_acc  (ta2,vy)
+      call convop_acc(ta2,vy)
       call chck('c11')
-      call convop_acc  (ta3,vz)
-!$acc update host(vx,vy,vz,ta3)
-      call outpost(vx,vy,vz,ta3,t,'gad')
-      call exitti('exit at beginning of advab_acc$',1)
-      call chck('d11')
+      call convop_acc(ta3,vz)
 
 !$acc parallel loop
       do i=1,n
-         bfx(i,1,1,1)=bfx(i,1,1,1)-ta1(i)*bm1(i,1,1,1)
-         bfy(i,1,1,1)=bfy(i,1,1,1)-ta2(i)*bm1(i,1,1,1)
-         bfz(i,1,1,1)=bfz(i,1,1,1)-ta3(i)*bm1(i,1,1,1)
+c        bfx(i,1,1,1)=bfx(i,1,1,1)-ta1(i)*bm1(i,1,1,1)
+c        bfy(i,1,1,1)=bfy(i,1,1,1)-ta2(i)*bm1(i,1,1,1)
+c        bfz(i,1,1,1)=bfz(i,1,1,1)-ta3(i)*bm1(i,1,1,1)
+         bfx(i,1,1,1)=bfx(i,1,1,1)-ta1(i)
+         bfy(i,1,1,1)=bfy(i,1,1,1)-ta2(i)
+         bfz(i,1,1,1)=bfz(i,1,1,1)-ta3(i)
       enddo
 !$acc end loop
 !$acc end data 
 
+!$acc update host(bfx,bfy,bfz)
+c     do i=1,lx1*ly1*lz1*nelv
+c        write (6,*) 'bfx=',bfx(i,1,1,1)
+c        write (6,*) 'bfy=',bfy(i,1,1,1)
+c        write (6,*) 'bfz=',bfz(i,1,1,1)
+c     enddo
+c     call outpost(bfx,bfy,bfz,pr,t,'gbf')
+c     stop
+
       return
       end
 c-----------------------------------------------------------------------
-      subroutine convop_acc(du,u)
-
-      include 'SIZE'
-      include 'TOTAL'
-      include 'CTIMER'    ! Contains icalld
-
-      real    du (lx1,ly1,lz1,lelt)
-      real    u  (lx1,ly1,lz1,lelt)
-
-      real jggl(lxd,lx1),dggl(lxd,lx1)
-      save jggl,dggl
-
-      call chck('q11')
-
-      if (icalld.eq.0) then
-         tadvc=0.0
-         call get_jggl(jggl,dggl) ! run on CPU and then acc copyin after
-      call chck('q21')
-!$acc    enter data copyin(jggl,dggl)
-      call chck('q31')
-      endif
-
-      icalld=icalld+1
-      nadvc=icalld
-      etime1=dnekclock()
-
-      call chck('q41')
-      call convop_fst_3d_acc(du,u,c_vx,bm1,jggl,dggl)
-      call chck('q51')
-
-      tadvc=tadvc+(dnekclock()-etime1)
-
-      return
-      END
-c-------------------------------------------------------------------
-      subroutine convop_fst_3d_acc(du,u,c,b,jj,dd)
-c-------------------------------------------------------------------
-      include 'SIZE'
-
-c     apply convecting field c to scalar field u
-c
-c           T
-c     du = J   ( C . grad Ju)
-
-
-      real du(lx1,ly1,lz1,lelt)  , u(lx1,ly1,lz1,lelt)
-      real  c(lxd*lyd*lzd,lelv,3), b(lx1,ly1,lz1,lelt)
-
-      real jj(lxd,lx1)
-      real dd(lxd,lx1)
-
-      real wk1(lxd,ly1,lz1),wk2(lxd,ly1,lz1)
-      real wk3(lxd,lyd,lz1),wk4(lxd,lyd,lz1)
-      real wk5(lxd,lyd,lz1),wk6(lxd,lyd,lzd)
-
-      integer e,p,q,r
-
-      call chck('p11')
-!$acc parallel loop present(du,u,c,b,jj,dd) gang
-!$acc&              private(wk1,wk2,wk3,wk4,wk5,wk6)
-      do e=1,nelv
-
-!$acc    loop collapse(2) vector
-         do j=1,ly1*lz1
-         do i=1,lxd
-            w1 = 0.0
-            w2 = 0.0
-!$acc       loop seq
-            do p=1,lx1
-               w1 = w1 + dd(i,p) * u(p,j,1,e) ! Grad:  crs->fine
-               w2 = w2 + jj(i,p) * u(p,j,1,e) ! Inter: crs->fine
-            enddo
-!$acc       end loop
-            wk1(i,j,1)=w1
-            wk2(i,j,1)=w2
-         enddo
-         enddo
-!$acc    end loop
-
-!$acc    loop collapse(3) vector
-         do k=1,lz1
-         do i=1,lxd
-         do j=1,lyd
-            w1 = 0.0
-            w2 = 0.0
-            w3 = 0.0
-!$acc       loop seq
-            do q=1,ly1
-               w1 = w1 + jj(j,q) * wk1(i,q,k) ! JxD u
-               w2 = w2 + dd(j,q) * wk2(i,q,k) ! DxJ u
-               w3 = w3 + jj(j,q) * wk2(i,q,k) ! JxJ u
-            enddo
-!$acc       end loop
-            wk3(i,j,k)=w1
-            wk4(i,j,k)=w2
-            wk5(i,j,k)=w3
-         enddo
-         enddo
-         enddo
-!$acc    end loop
-
-         l=0
-!$acc    loop collapse(2) vector
-         do i=1,lxd*lyd
-         do k=1,lzd
-            w1 = 0.0
-            w2 = 0.0
-            w3 = 0.0
-!$acc       loop seq
-            do r=1,lz1
-               w1 = w1 + jj(k,r) * wk3(i,1,r) ! JxJxD u
-               w2 = w2 + jj(k,r) * wk4(i,1,r) ! JxDxJ u
-               w3 = w3 + dd(k,r) * wk5(i,1,r) ! DxJxJ u
-            enddo
-!$acc       end loop
-            l=l+1
-            wk6(i,1,k)=w1*c(l,e,1)+w2*c(l,e,2)+w3*c(l,e,3) ! c1*ur+c2*us+c3*ut
-         enddo
-         enddo
-!$acc    end loop
-
-!! START COLLAPSING BACK with J'
-!$acc    loop collapse(2) vector
-         do i=1,lxd*lyd
-         do k=1,lz1
-            w1 = 0.0
-!$acc       loop seq
-            do r=1,lzd                        !  T
-               w1 = w1 + jj(r,k) * wk6(i,1,r) ! J  x I x I w6
-            enddo
-!$acc       end loop
-            wk5(i,1,k)=w1
-         enddo
-         enddo
-!$acc    end loop
-
-
-!$acc    loop collapse(3) vector
-         do k=1,lz1
-         do i=1,lxd
-         do j=1,ly1
-            w1 = 0.0
-!$acc       loop seq
-            do q=1,lyd
-               w1 = w1 + jj(q,j) * wk5(i,q,k)
-            enddo
-!$acc       end loop
-            wk2(i,j,k)=w1
-         enddo
-         enddo
-         enddo
-!$acc    end loop
-
-!$acc    loop collapse(2) vector
-         do j=1,ly1*lz1
-         do i=1,lx1
-            w1 = 0.0
-!$acc       loop seq
-            do p=1,lxd
-               w1 = w1 + jj(p,i) * wk2(p,j,1)
-            enddo
-!$acc       end loop
-            du(i,j,1,e) = w1*b(i,j,1,e)
-         enddo
-         enddo
-!$acc    end loop
-
-      enddo
-!$acc end parallel loop
-
-      return
-      end
-
-c-------------------------------------------------------------------
       subroutine get_jggl(jggl,dggl) ! acc copyin happens here
 c-------------------------------------------------------------------
       include 'SIZE'
@@ -831,7 +674,6 @@ c-------------------------------------------------------------------
 
       call get_dgl_ptr (ip,nxd,nxd)
       call mxm(dg(ip),nxd,jggl,nxd,dggl,nx1)  ! dggl = dg*jggl
-
 
       return
       end
@@ -1428,3 +1270,187 @@ c-----------------------------------------------------------------------
       return
       END
 c-----------------------------------------------------------------------
+      subroutine convop_acc(du,u)
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'CTIMER'    ! Contains icalld
+
+      real    du (lx1,ly1,lz1,lelt)
+      real    u  (lx1,ly1,lz1,lelt)
+
+      real jggl(lxd,lx1),dggl(lxd,lx1)
+      save jggl,dggl
+
+      call chck('q11')
+
+      if (icalld.eq.0) then
+         tadvc=0.0
+         call get_jggl(jggl,dggl) ! run on CPU and then acc copyin after
+      call chck('q21')
+      call chck('q31')
+      endif
+
+!$acc data copy(jggl,dggl)
+      icalld=icalld+1
+      nadvc=icalld
+      etime1=dnekclock()
+
+      call chck('q41')
+      call convop_fst_3d_acc(du,u,vxd,vyd,vzd,bm1,jggl,dggl)
+      call chck('q51')
+
+      tadvc=tadvc+(dnekclock()-etime1)
+!$acc end data
+
+      return
+      end
+c-------------------------------------------------------------------
+      subroutine convop_fst_3d_acc(du,u,c1,c2,c3,b,jj,dd)
+c-------------------------------------------------------------------
+      include 'SIZE'
+      include 'DEALIAS'
+
+c     apply convecting field c to scalar field u
+c
+c           T
+c     du = J   ( C . grad Ju)
+
+
+      real du(lx1,ly1,lz1,lelt),u(lx1,ly1,lz1,lelt),b(lx1,ly1,lz1,lelt)
+      real c1(lxd*lyd*lzd,lelt),
+     $     c2(lxd*lyd*lzd,lelt),
+     $     c3(lxd*lyd*lzd,lelt)
+
+      real jj(lxd,lx1)
+      real dd(lxd,lx1)
+
+      real wk1(lxd,ly1,lz1),wk2(lxd,ly1,lz1)
+      real wk3(lxd,lyd,lz1),wk4(lxd,lyd,lz1)
+      real wk5(lxd,lyd,lz1),wk6(lxd,lyd,lzd)
+
+      integer e,p,q,r
+
+      call chck('p11')
+
+!$acc parallel loop present(du,u,c1,c2,c3,b,jj,dd) gang
+!$acc&              private(wk1,wk2,wk3,wk4,wk5,wk6)
+
+      do e=1,nelv
+
+!$acc    loop collapse(2) vector
+         do j=1,ly1*lz1
+         do i=1,lxd
+            w1 = 0.0
+            w2 = 0.0
+!$acc       loop seq
+            do p=1,lx1
+               w1 = w1 + dd(i,p) * u(p,j,1,e) ! Grad:  crs->fine
+               w2 = w2 + jj(i,p) * u(p,j,1,e) ! Inter: crs->fine
+            enddo
+!$acc       end loop
+            wk1(i,j,1)=w1
+            wk2(i,j,1)=w2
+         enddo
+         enddo
+!$acc    end loop
+
+!$acc    loop collapse(3) vector
+         do k=1,lz1
+         do i=1,lxd
+         do j=1,lyd
+            w1 = 0.0
+            w2 = 0.0
+            w3 = 0.0
+!$acc       loop seq
+            do q=1,ly1
+               w1 = w1 + jj(j,q) * wk1(i,q,k) ! JxD u
+               w2 = w2 + dd(j,q) * wk2(i,q,k) ! DxJ u
+               w3 = w3 + jj(j,q) * wk2(i,q,k) ! JxJ u
+            enddo
+!$acc       end loop
+            wk3(i,j,k)=w1
+            wk4(i,j,k)=w2
+            wk5(i,j,k)=w3
+         enddo
+         enddo
+         enddo
+!$acc    end loop
+
+c        l=0
+!$acc    loop collapse(2) vector
+         do i=1,lxd*lyd
+         do k=1,lzd
+            w1 = 0.0
+            w2 = 0.0
+            w3 = 0.0
+!$acc       loop seq
+            do r=1,lz1
+               w1 = w1 + jj(k,r) * wk3(i,1,r) ! JxJxD u
+               w2 = w2 + jj(k,r) * wk4(i,1,r) ! JxDxJ u
+               w3 = w3 + dd(k,r) * wk5(i,1,r) ! DxJxJ u
+c              w3 = w3 + jj(k,r) * wk5(i,1,r) ! DxJxJ u
+            enddo
+!$acc       end loop
+c           l=l+1
+c           wk6(i,1,k)=w1*c(l,e,1)+w2*c(l,e,2)+w3*c(l,e,3) ! c1*ur+c2*us+c3*ut
+            wk6(i,1,k)=w1*vxd(i,1,k,e)
+     $                +w2*vyd(i,1,k,e)
+     $                +w3*vzd(i,1,k,e) ! c1*ur+c2*us+c3*ut
+         enddo
+         enddo
+!$acc    end loop
+
+!! START COLLAPSING BACK with J'
+
+!$acc    loop collapse(2) vector
+         do i=1,lxd*lyd
+         do k=1,lz1
+            w1 = 0.0
+!$acc       loop seq
+            do r=1,lzd                        !  T
+               w1 = w1 + jj(r,k) * wk6(i,1,r) ! J  x I x I w6
+            enddo
+!$acc       end loop
+            wk5(i,1,k)=w1
+         enddo
+         enddo
+!$acc    end loop
+
+!$acc    loop collapse(3) vector
+         do k=1,lz1
+         do i=1,lxd
+         do j=1,ly1
+            w1 = 0.0
+!$acc       loop seq
+            do q=1,lyd
+               w1 = w1 + jj(q,j) * wk5(i,q,k)
+            enddo
+!$acc       end loop
+            wk2(i,j,k)=w1
+         enddo
+         enddo
+         enddo
+!$acc    end loop
+
+!$acc    loop collapse(2) vector
+         do j=1,ly1*lz1
+         do i=1,lx1
+            w1 = 0.0
+!$acc       loop seq
+            do p=1,lxd
+               w1 = w1 + jj(p,i) * wk2(p,j,1)
+            enddo
+!$acc       end loop
+c           du(i,j,1,e) = w1*b(i,j,1,e)
+            du(i,j,1,e) = w1
+         enddo
+         enddo
+!$acc    end loop
+      enddo
+!$acc end parallel loop
+
+      return
+      end
+
+c-------------------------------------------------------------------

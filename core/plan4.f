@@ -52,9 +52,6 @@ c
          if (istep.eq.1) call hsmg_acc_data_copyin()
          call makef_acc
 
-c        call outpost(bfx,bfy,bfz,pr,t,'gp4')
-c        stop
-
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
          call sumab_acc(vy_e,vy,vylag,n,ab,nab)
          call sumab_acc(vz_e,vz,vzlag,n,ab,nab)
@@ -71,8 +68,6 @@ c        stop
          call bcdirvc  (vx,vy,vz,v1mask,v2mask,v3mask) 
 !$acc update device(vx,vy,vz)
 
-!$acc update host(vx_e,vy_e,vz_e)
-
 C        first, compute pressure
 
          if (icalld.eq.0) tpres=0.0
@@ -80,9 +75,11 @@ C        first, compute pressure
          npres=icalld
          etime1=dnekclock()
 
-!$ACC ENTER DATA COPYIN(h1,h2,respr,pmask,res1,res2,res3)
-c!$acc data create(h1,h2,respr,res1,res2,res3) 
+!$acc enter data copyin(h1,h2,respr,pmask,res1,res2,res3)
+
+c!$acc data create(h1,h2,respr,res1,res2,res3) present(pmask)
 c!$acc update device(pmask)
+
          call crespsp_acc(respr)
 
 c!$acc update host(respr)
@@ -102,14 +99,55 @@ c        stop
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
 
+c!$acc    update host(pr)
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'pr=',pr(i,1,1,1)
+         enddo
+c        stop
+
          tpres=tpres+(dnekclock()-etime1)
 
          call cresvsp_acc(res1,res2,res3,h1,h2)
 
-!$acc update host(res1,res2,res3,h1,h2)
+!$acc    update host(res1,res2,res3)
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'res1=',res1(i,1,1,1)
+         enddo
+c        stop
+
 c        call ophinv_pr_debug(dv1,dv2,dv3,res1,res2,res3,
 c    $                        h1,h2,tolhv,nmxh)
-         call ophinv_pr_acc(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
+
+         call dssum(res1,nx1,ny1,nz1)
+         call dssum(res2,nx1,ny1,nz1)
+         call dssum(res3,nx1,ny1,nz1)
+
+         call col2_acc(res1,v1mask,ntot1)
+         call col2_acc(res2,v2mask,ntot1)
+         call col2_acc(res3,v3mask,ntot1)
+
+!$acc    update host(res1,res2,res3)
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'res1=',res1(i,1,1,1)
+         enddo
+c        stop
+
+c        call ophinv_pr_acc(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
+
+c        call chktcg1_acc(tol,res1,h1,h2,v1mask,vmult,imesh,isd)
+         call chktcg1_acc(tol,res1,h1,h2,v1mask,vmult,imesh,isd)
+
+         write (6,*) 'tol=',tol
+         stop
+
+         write (6,*) 'imsh=',imesh
+         write (6,*) 'tol=',tol
+         write (6,*) 'maxit=',maxit
+         write (6,*) 'isd=',isd
+         stop
+
+         call cggo_acc(dv1,res1,h1,h2,v1mask,vmult,imesh,tol,maxit,isd,
+     $                 binvm1,'VELX')
 
          do i=1,lx1*ly1*lz1
             write (6,*) 'dv1=',dv1(i,1,1,1)
@@ -1006,9 +1044,23 @@ c     add explicit (NONLINEAR) terms
       enddo
 !$acc end parallel
 
+c!$acc update host(ta1)
+
+      do i=1,lx1*ly1*lz1*nelv
+c        write (6,*) 'ta1=',ta1(i,1,1,1)
+      enddo
+c     stop
+
       call dssum (ta1,nx1,ny1,nz1)
       call dssum (ta2,nx1,ny1,nz1)
       call dssum (ta3,nx1,ny1,nz1)
+
+c!$acc update host(ta1)
+
+      do i=1,lx1*ly1*lz1*nelv
+c        write (6,*) 'ta1=',ta1(i,1,1,1)
+      enddo
+c     stop
 
 c     call outpost(ta1,ta2,ta3,vtrans,t,'gc_')
 c     call outpost(bm1,binvm1,wa1,wa2,wa3,'gc_')
@@ -1130,3 +1182,99 @@ c----------------------------------------------------------------------
       return
       end
 c-----------------------------------------------------------------------
+      subroutine chktcg1_acc2(tol,res,h1,h2,mask,mult,imesh,isd)
+C-------------------------------------------------------------------
+C
+C     Check that the tolerances are not too small for the CG-solver.
+C     Important when calling the CG-solver (Gauss-Lobatto mesh) with
+C     zero Neumann b.c.
+C
+C-------------------------------------------------------------------
+      include 'SIZE'
+      include 'INPUT'
+      include 'MASS'
+      include 'EIGEN'
+
+c     common  /cprint/ ifprint
+c     logical          ifprint
+
+      real w1   (lx1,ly1,lz1,lelt),
+     $     w2   (lx1,ly1,lz1,lelt)
+
+      real res  (lx1,ly1,lz1,lelt)
+      real h1   (lx1,ly1,lz1,lelt)
+      real h2   (lx1,ly1,lz1,lelt)
+      real mult (lx1,ly1,lz1,lelt)
+      real mask (lx1,ly1,lz1,lelt)
+
+!$acc data create(w1,w2) present(res,h1,h2,mult,mask)
+
+      if (eigaa.ne.0.) then
+         acondno = eigga/eigaa
+      else
+         acondno = 10.
+      endif
+
+c     Single or double precision???
+
+      delta = 1.e-9
+      x     = 1.+delta
+      y     = 1.
+      diff  = abs(x-y)
+      if (diff.eq.0.) eps = 1.e-6
+      if (diff.gt.0.) eps = 1.e-13
+
+      if (imesh.eq.1) then
+          nl  = nelv
+          vol = volvm1
+      elseif (imesh.eq.2) then
+          nl  = nelt
+          vol = voltm1
+      endif
+
+      ntot1 = nx1*ny1*nz1*nl
+      call copy (w1,res,ntot1)
+
+      if (imesh.eq.1) then
+         call col3_acc(w2,binvm1,w1,ntot1)
+         rinit  = sqrt(glsc3_acc(w2,w1,mult,ntot1)/volvm1)
+      else
+         call col3_acc(w2,bintm1,w1,ntot1)
+         rinit  = sqrt(glsc3_acc(w2,w1,mult,ntot1)/voltm1)
+      endif
+
+      write (6,*) 'rinit=',rinit
+      stop
+
+      rmin   = eps*rinit
+
+c     if (tol.lt.rmin) then
+c        if (nio.eq.0.and.ifprint)
+c    $   write (6,*) 'New CG1-tolerance (RINIT*epsm) = ',rmin,tol
+c        tol = rmin
+c     endif
+
+      call rone_acc(w1,ntot1)
+      bcneu1 = glsc3_acc(w1,mask,mult,ntot1)
+      bcneu2 = glsc3_acc(w1,w1  ,mult,ntot1)
+      bctest = abs(bcneu1-bcneu2)
+
+      call axhelm_acc(w2,w1,h1,h2,imesh,isd)
+      call col2_acc(w2,w2,ntot1)
+      call col2_acc(w2,bm1,ntot1)
+      bcrob  = sqrt(glsum_acc(w2,ntot1)/vol)
+
+      if ((bctest .lt. .1).and.(bcrob.lt.(eps*acondno))) then
+c         OTR = GLSC3 (W1,RES,MULT,NTOT1)
+         tolmin = rinit*eps*10.
+         if (tol .lt. tolmin) then
+             tol = tolmin
+c            if (nio.eq.0.and.ifprint)
+c    $       write(6,*) 'New CG1-tolerance (Neumann) = ',tolmin
+         endif
+      endif
+
+!$acc end data
+
+      return
+      end

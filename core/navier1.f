@@ -5250,3 +5250,77 @@ C----------------------------------------------------------------------
       return
       END
 c-----------------------------------------------------------------------
+      subroutine ophinv_acc(out1,out2,out3,inp1,inp2,inp3,
+     $                      h1,h2,tolh,nmxi)
+C----------------------------------------------------------------------
+C
+C     OUT = (H1*A+H2*B)-1 * INP  (implicit)
+C
+C----------------------------------------------------------------------
+      include 'SIZE'
+      include 'INPUT'
+      include 'SOLN'
+      include 'TSTEP'
+
+      real out1 (lx1,ly1,lz1,1)
+      real out2 (lx1,ly1,lz1,1)
+      real out3 (lx1,ly1,lz1,1)
+      real inp1 (lx1,ly1,lz1,1)
+      real inp2 (lx1,ly1,lz1,1)
+      real inp3 (lx1,ly1,lz1,1)
+      real h1   (lx1,ly1,lz1,1)
+      real h2   (lx1,ly1,lz1,1)
+
+      imesh = 1
+
+      if (ifstrs) then
+         call exitti('stress formulation not supported for openacc',1)
+c        MATMOD = 0
+c        if (ifield.eq.ifldmhd) then
+c           CALL HMHZSF  ('NOMG',OUT1,OUT2,OUT3,INP1,INP2,INP3,H1,H2,
+c    $                     B1MASK,B2MASK,B3MASK,VMULT,
+c    $                     TOLH,NMXI,MATMOD)
+c        else
+c           CALL HMHZSF  ('NOMG',OUT1,OUT2,OUT3,INP1,INP2,INP3,H1,H2,
+c    $                     V1MASK,V2MASK,V3MASK,VMULT,
+c    $                     TOLH,NMXI,MATMOD)
+c        endif
+      elseif (ifcyclic) then
+         call exitti('cyclic not supported for openacc',1)
+c        matmod = 0
+c        if (ifield.eq.ifldmhd) then
+c           call hmhzsf  ('bxyz',out1,out2,out3,inp1,inp2,inp3,h1,h2,
+c    $                     b1mask,b2mask,b3mask,vmult,
+c    $                     tolh,nmxi,matmod)
+c        else
+c           call hmhzsf  ('vxyz',out1,out2,out3,inp1,inp2,inp3,h1,h2,
+c    $                     v1mask,v2mask,v3mask,vmult,
+c    $                     tolh,nmxi,matmod)
+c        endif
+      else
+         if (ifield.eq.ifldmhd) then
+            call exitti('mhd not supported for openacc',1)
+c           CALL HMHOLTZ ('BX  ',OUT1,INP1,H1,H2,B1MASK,VMULT,
+c    $                                      IMESH,TOLH,NMXI,1)
+c           CALL HMHOLTZ ('BY  ',OUT2,INP2,H1,H2,B2MASK,VMULT,
+c    $                                      IMESH,TOLH,NMXI,2)
+c           IF (NDIM.EQ.3) 
+c    $      CALL HMHOLTZ ('BZ  ',OUT3,INP3,H1,H2,B3MASK,VMULT,
+c    $                                      IMESH,TOLH,NMXI,3)
+         else
+c           call hmholtz ('VELX',out1,inp1,h1,h2,v1mask,vmult,
+            call hmholtz_acc('VELX',out1,inp1,h1,h2,v1mask,vmult,
+     $                       imesh,tolh,nmxi,1)
+
+            call hmholtz_acc('VELY',out2,inp2,h1,h2,v2mask,vmult,
+     $                       imesh,tolh,nmxi,2)
+
+            if (ndim.eq.3) 
+     $      call hmholtz_acc('VELZ',out3,inp3,h1,h2,v3mask,vmult,
+     $                       imesh,tolh,nmxi,3)
+         endif
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------

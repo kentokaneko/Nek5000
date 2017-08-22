@@ -1041,7 +1041,12 @@ C
       if (param(94).gt.0) ifproj = .true.
 
       if (.not.ifproj) then
-         if (ifield.eq.1) call ophinv
+c        if (ifield.eq.1) call ophinv
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'i1=',i1(i,1,1,1)
+         enddo
+c        stop
+         if (ifield.eq.1) call ophinv_acc
      $      (o1,o2,o3,i1,i2,i3,h1,h2,tolh,nmxhi)
          if (ifield.eq.ifldmhd) call ophinv
      $      (o1,o2,o3,i1,i2,i3,h1,h2,tolh,nmxhi)

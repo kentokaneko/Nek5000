@@ -62,30 +62,21 @@ c
 
          call lagvel_acc
 
+!$acc    update host(vx,vy,vz,v1mask,v2mask,v3mask)
          ! mask Dirichlet boundaries
-!$acc update host(vx,vy,vz,v1mask,v2mask,v3mask)
          call bcdirvc  (vx,vy,vz,v1mask,v2mask,v3mask) 
-!$acc update device(vx,vy,vz)
+!$acc    update device(vx,vy,vz)
 
-C        first, compute pressure
+c        first, compute pressure
 
          if (icalld.eq.0) tpres=0.0
          icalld=icalld+1
          npres=icalld
          etime1=dnekclock()
 
-!$acc enter data copyin(h1,h2,respr,pmask,res1,res2,res3,dv1,dv2,dv3)
-
-c!$acc data create(h1,h2,respr,res1,res2,res3) present(pmask)
-c!$acc update device(pmask)
+!$acc    enter data copyin(h1,h2,respr,pmask,res1,res2,res3,dv1,dv2,dv3)
 
          call crespsp_acc(respr)
-
-c!$acc update host(respr)
-         do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'respr=',respr(i,1,1,1)
-         enddo
-c        stop
 
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
@@ -100,26 +91,12 @@ c        stop
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
 
-c!$acc    update host(pr)
-         do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'pr=',pr(i,1,1,1)
-         enddo
-c        stop
 
          tpres=tpres+(dnekclock()-etime1)
 
-         write (6,*) 'nmxh',nmxh
          call cresvsp_acc(res1,res2,res3,h1,h2)
 
-!$acc    update host(res1,res2,res3)
-         do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'res1=',res1(i,1,1,1)
-         enddo
-c        stop
-
-c        call ophinv_pr_debug(dv1,dv2,dv3,res1,res2,res3,
-c    $                        h1,h2,tolhv,nmxh)
-
+         ! ophinv_pr starts here
          call dssum(res1,nx1,ny1,nz1)
          call dssum(res2,nx1,ny1,nz1)
          call dssum(res3,nx1,ny1,nz1)
@@ -128,15 +105,6 @@ c    $                        h1,h2,tolhv,nmxh)
          call col2_acc(res2,v2mask,ntot1)
          call col2_acc(res3,v3mask,ntot1)
 
-!$acc    update host(res1,res2,res3)
-         do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'res1=',res1(i,1,1,1)
-         enddo
-c        stop
-
-c        call ophinv_pr_acc(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
-
-c        call chktcg1_acc(tol,res1,h1,h2,v1mask,vmult,imesh,isd)
          call chktcg1_acc(tol1,res1,h1,h2,v1mask,vmult,imesh,1)
          call chktcg1_acc(tol2,res1,h1,h2,v2mask,vmult,imesh,2)
          call chktcg1_acc(tol3,res1,h1,h2,v3mask,vmult,imesh,3)
@@ -149,32 +117,41 @@ c        call chktcg1_acc(tol,res1,h1,h2,v1mask,vmult,imesh,isd)
      $                 binvm1)
          call cggo_acc(dv3,res3,h1,h2,v3mask,vmult,imesh,tol3,nmxh,3,
      $                 binvm1)
+         ! ophinv_pr ends here
 
-!$acc    update host(dv1,dv2,dv3)
-
-         do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'dv1=',dv1(i,1,1,1)
-c           write (6,*) 'dv2=',dv2(i,1,1,1)
-c           write (6,*) 'dv3=',dv3(i,1,1,1)
-         enddo
+c!$acc    update host(dv1,dv2,dv3)
+c         do i=1,lx1*ly1*lz1*nelv
+c            write (6,*) 'dv1=',dv1(i,1,1,1)
+c            write (6,*) 'dv2=',dv2(i,1,1,1)
+c            write (6,*) 'dv3=',dv3(i,1,1,1)
+c         enddo
+c         stop
 
 c below gives correct values in iterations
 c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310  
 
-!$acc update device(dv1,dv2,dv3)
          call add2_acc  (vx,dv1,n)      
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
-!$acc update host(vx,vy,vz)
-!$acc exit data
+
+!$acc    update host(pr)
+!$acc    update host(vx,vy,vz)
 
          do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'vx=',vx(i,1,1,1)
-c           write (6,*) 'vy=',vy(i,1,1,1)
-c           write (6,*) 'vz=',vz(i,1,1,1)
+            write (6,*) 'pr=',pr(i,1,1,1)
          enddo
-c        stop
-         
+
+         do i=1,lx1*ly1*lz1
+            write (6,*) 'vx=',vx(i,1,1,1)
+            write (6,*) 'vy=',vy(i,1,1,1)
+            write (6,*) 'vz=',vz(i,1,1,1)
+         enddo
+
+         call outpost(vx,vy,vz,pr,t,'gp4')
+         stop
+
+!$acc exit data
+
          IF (NIO.EQ.0) THEN
             WRITE(6,'(13X,A,1p2e13.4)')
      &         'L1/L2 DIV(V)        ',DIV1,DIV2
@@ -189,7 +166,7 @@ c        stop
       endif
  
       return
-      END
+      end
 c-----------------------------------------------------------------------
       subroutine plan4 (igeom)
 

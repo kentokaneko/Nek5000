@@ -351,7 +351,7 @@ C
       RETURN
       END
 c-----------------------------------------------------------------------
-      FUNCTION VLSC3_ACC(X,Y,B,N)
+      function vlsc3_acc(x,y,b,n)
 C ROR, 05-12-2017: This does not give the correct results on GPU.
 C Inside the reduction clause, the values of X, Y, and B were simply
 C 0, rather than the correct values. This was confimred with cuda-gdb

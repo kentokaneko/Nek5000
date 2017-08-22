@@ -199,7 +199,7 @@ c     Check for non-trivial null-space
       h2max = glmax_acc(h2  ,n)
       skmin = glmin_acc(mask,n)
       if (skmin.gt.0.and.h2max.eq.0) ifmcor = .true.
- 
+
       if (ifmcor) then
 
          smean = -1./glsum_acc(bm1,n) ! Modified 5/4/12 pff
@@ -240,7 +240,7 @@ c!$acc    update host(scalar)
          if (param(22).lt.0) tol=abs(param(22))*rbn0
          if (tin.lt.0)       tol=abs(tin)*rbn0
 
-         write (6,*) 'tol=',tol
+c        write (6,*) 'tol=',tol
 
          ifprint_hmh = .false.
          if (nio.eq.0.and.ifprint.and.param(74).ne.0) ifprint_hmh=.true.
@@ -249,7 +249,6 @@ c!$acc    update host(scalar)
 c        if (ifprint_hmh)
 c    &      write(6,3002) istep,'  Hmholtz ' // name,
 c    &                    iter,rbn2,h1(1),tol,h2(1),ifmcor
-
 
 c        Always take at least one iteration   (for projection) pff 11/23/98
          IF (rbn2.LE.TOL.and.(iter.gt.1 .or. istep.le.5)) THEN
@@ -278,8 +277,8 @@ c
          rho  = glsc3_acc(w,p,mult,n)
          alpha=rtz1/rho
          alphm=-alpha
-         write (6,*) 'rtz1=',rtz1
-         write (6,*) 'rho=',rho
+c        write (6,*) 'rtz1=',rtz1
+c        write (6,*) 'rho=',rho
 c        stop
          call add2s2_acc(x,p ,alpha,n)
          call add2s2_acc(r,w ,alphm,n)
@@ -294,14 +293,14 @@ c        Generate tridiagonal matrix for Lanczos scheme
          if (iter.eq.1) then
             krylov = krylov+1
             diagt(iter) = rho/rtz1
-            write (6,*) 'krylov,diagt(1)',krylov,diagt(1)
+c           write (6,*) 'krylov,diagt(1)',krylov,diagt(1)
 c           stop
          elseif (iter.le.maxcg) then
             krylov = krylov+1
             diagt(iter)    = (beta**2 * rho0 + rho ) / rtz1
             upper(iter-1)  = -beta * rho0 / sqrt(rtz2 * rtz1)
-            write (6,*)
-     $      'krylov,diagt(2),upper(1)',krylov,diagt(2),upper(1)
+c           write (6,*)
+c    $      'krylov,diagt(2),upper(1)',krylov,diagt(2),upper(1)
 c           stop
          endif
  1000 enddo

@@ -60,7 +60,6 @@ c
          ! add user defined divergence to qtl 
          call add2_acc (qtl,usrdiv,n)
 
-
          call lagvel_acc
 
          ! mask Dirichlet boundaries
@@ -75,7 +74,7 @@ C        first, compute pressure
          npres=icalld
          etime1=dnekclock()
 
-!$acc enter data copyin(h1,h2,respr,pmask,res1,res2,res3)
+!$acc enter data copyin(h1,h2,respr,pmask,res1,res2,res3,dv1,dv2,dv3)
 
 c!$acc data create(h1,h2,respr,res1,res2,res3) present(pmask)
 c!$acc update device(pmask)
@@ -94,7 +93,9 @@ c        stop
 
          call dssum     (respr,nx1,ny1,nz1)
          call col2_acc  (respr,pmask,n)
-         call hmh_gmres (respr,h1,h2,vmult,nmxh)
+
+         iter=nmxh
+         call hmh_gmres (respr,h1,h2,vmult,iter)
 
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
@@ -107,6 +108,7 @@ c        stop
 
          tpres=tpres+(dnekclock()-etime1)
 
+         write (6,*) 'nmxh',nmxh
          call cresvsp_acc(res1,res2,res3,h1,h2)
 
 !$acc    update host(res1,res2,res3)
@@ -135,19 +137,14 @@ c        stop
 c        call ophinv_pr_acc(dv1,dv2,dv3,res1,res2,res3,h1,h2,tolhv,nmxh)
 
 c        call chktcg1_acc(tol,res1,h1,h2,v1mask,vmult,imesh,isd)
-         call chktcg1_acc(tol,res1,h1,h2,v1mask,vmult,imesh,isd)
+         call chktcg1_acc(tol1,res1,h1,h2,v1mask,vmult,imesh,1)
+         call chktcg1_acc(tol2,res1,h1,h2,v2mask,vmult,imesh,2)
+         call chktcg1_acc(tol3,res1,h1,h2,v3mask,vmult,imesh,3)
 
-         write (6,*) 'tol=',tol
-         stop
+         write (6,*) 'maxit=',nmxh
 
-         write (6,*) 'imsh=',imesh
-         write (6,*) 'tol=',tol
-         write (6,*) 'maxit=',maxit
-         write (6,*) 'isd=',isd
-         stop
-
-         call cggo_acc(dv1,res1,h1,h2,v1mask,vmult,imesh,tol,maxit,isd,
-     $                 binvm1,'VELX')
+         call cggo_acc(dv1,res1,h1,h2,v1mask,vmult,imesh,tol1,nmxh,1,
+     $                 binvm1)
 
          do i=1,lx1*ly1*lz1
             write (6,*) 'dv1=',dv1(i,1,1,1)

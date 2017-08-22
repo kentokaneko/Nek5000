@@ -4,6 +4,14 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'    
 
+      parameter (lg=lx1*ly1*lz1*lelt)
+      parameter (maxcg=900)
+
+      common /tdarray/ diagt(maxcg),upper(maxcg)
+
+      common /scrcg/ d(lg), scalar(2)
+      common /scrcg2/ r(lg), w(lg), p(lg), z(lg)
+
       integer icalld
       save    icalld
       data    icalld/0/
@@ -44,6 +52,8 @@ c-----------------------------------------------------------------------
 !$acc enter data copyin(vtrans,vdiff)
 !$acc enter data copyin(param,nelfld)
 !$acc enter data copyin(vxd,vyd,vzd)
+!$acc enter data copyin(diagt,upper)
+!$acc enter data copyin(d,scalar,r,w,p,z)
 
 !$acc   enter data create (ibc_acc)
 
@@ -348,20 +358,6 @@ c-----------------------------------------------------------------------
          h2 (i)=vtrans(i,1,1,1,1)*dtbd
       enddo
 !$acc end parallel loop 
-
-!$acc update host(h2)
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'h2=',h2(i)
-      enddo
-c     stop
-
-!$acc update host(vx,vy,vz)
-      do i=1,n
-c        write (6,*) 'vx=',vx(i,1,1,1)
-c        write (6,*) 'vy=',vy(i,1,1,1)
-c        write (6,*) 'vz=',vz(i,1,1,1)
-      enddo
-c     stop
 
       call ophx_acc(resv1,resv2,resv3,vx,vy,vz,h1,h2)
 c!$acc update host(resv1,resv2,resv3)

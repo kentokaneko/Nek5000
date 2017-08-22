@@ -318,6 +318,7 @@ c     GMRES iteration.
       common  /ctolpr/ divex
       common  /cprint/ ifprint
       logical          ifprint
+
       real             res  (lx1*ly1*lz1*lelv)
       real             h1   (lx1*ly1*lz1*lelv)
       real             h2   (lx1*ly1*lz1*lelv)
@@ -372,7 +373,7 @@ c     res, h1, h2, and wt, since they are local variables.
      $   tolps = abs(param(21))
       if (istep.eq.0) tolps = 1.e-4
       tolpss = tolps
-c
+
       iconv = 0
 
       call rzero_acc(x_gmres,n)

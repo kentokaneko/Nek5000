@@ -103,39 +103,57 @@ C-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       include 'FDMH1'
+
+      parameter (lg=lx1*ly1*lz1*lelt)
+      parameter (maxcg=900)
  
-      COMMON  /CPRINT/ IFPRINT, IFHZPC
-      LOGICAL          IFPRINT, IFHZPC
+      common  /cprint/ ifprint, ifhzpc
+      logical          ifprint, ifhzpc
  
       common /fastmd/ ifdfrm(lelt), iffast(lelt), ifh2, ifsolv
       logical ifdfrm, iffast, ifh2, ifsolv
 
       logical ifmcor,ifprint_hmh
- 
-      real x(1),f(1),h1(1),h2(1),mask(1),mult(1),binv(1)
-      parameter        (lg=lx1*ly1*lz1*lelt)
-      COMMON /SCRCG/ d (lg) , scalar(2)
-      common /SCRMG/ r (lg) , w (lg) , p (lg) , z (lg)
- 
-      parameter (maxcg=900)
+
+      real x(lx1*ly1*lz1*lelt),
+     $     f(lx1*ly1*lz1*lelt),
+     $     h1(lx1*ly1*lz1*lelt),
+     $     h2(lx1*ly1*lz1*lelt),
+     $     mask(lx1*ly1*lz1*lelt),
+     $     mult(lx1*ly1*lz1*lelt),
+     $     binv(lx1*ly1*lz1*lelt)
+
+      common /scrcg/ scrd(lg), scalar(2)
+      common /scrcg2/ r(lg), w(lg), p(lg), z(lg)
+
+c     real r(lx1*ly1*lz1*lelt),
+c    $     w(lx1*ly1*lz1*lelt),
+c    $     p(lx1*ly1*lz1*lelt),
+c    $     z(lx1*ly1*lz1*lelt),
+c    $     scrd(lx1*ly1*lz1*lelt),
+c    $     scalar(2)   
+
       common /tdarray/ diagt(maxcg),upper(maxcg)
       common /iterhm/ niterhm
-      character*4 name
+c     character*4 name
  
 c **  zero out stuff for Lanczos eigenvalue estimator
 
-!$ACC DATA CREATE (diagt,upper)
+c!$acc data present(r,w,p,z,scrd,scalar)
+c!$acc&     present(f,h1,h2,mask,mult,binv)
+
       call rzero_acc(diagt,maxcg)
       call rzero_acc(upper,maxcg)
-      rho = 0.00
-C
-      NXYZ   = NX1*NY1*NZ1
-      NEL    = NELV
-      VOL    = VOLVM1
-      IF (IMSH.EQ.2) NEL=NELT
-      IF (IMSH.EQ.2) VOL=VOLTM1
-      n      = NEL*NXYZ
+      rho = 0.0
 
+      nxyz = nx1*ny1*nz1
+      nel  = nelv
+      vol  = volvm1
+
+      if (imsh.eq.2) nel=nelt
+      if (imsh.eq.2) vol=voltm1
+
+      n=nel*nxyz
       tol=abs(tin)
 
 c     overrule tolerance for velocity
@@ -151,17 +169,23 @@ c     overrule tolerance for velocity
          call setfast(h1,h2,imesh)
          ifsolv = .true.
       endif
- 
+
 c     Set up diag preconditioner.
-c     D is not on GPU at this point yet
 
-!$ACC DATA CREATE(D)
-!$ACC UPDATE HOST (D,h1,h2)
-      call setprec(D,h1,h2,imsh,isd)
-!$ACC UPDATE DEVICE(D)   
-!$ACC END DATA
+!$acc update host(scrd)
+      call setprec_acc(scrd,h1,h2,imsh,isd) ! needs to be ported
+!$acc update device(scrd)
 
-      call copy_acc (r,f,n)
+      call dssum(scrd,nx1,ny1,nz1)
+      call invcol1_acc(scrd,nx1*ny1*nz1*nelv)
+
+!$acc update host(scrd)
+      do i=1,lx1*ly1*lz1*nelv
+c        write (6,*) 'd=',scrd(i)
+      enddo
+
+      call copy_acc(r,f,n)
+
       call rzero_acc(x,n)
       call rzero_acc(p,n)
 
@@ -185,42 +209,57 @@ c     Check for non-trivial null-space
          call add2s2_acc(r,x,rmean,n)
          call rzero_acc(x,n)
       endif
-C
+
       krylov = 0
       rtz1=1.0
       niterhm = 0
 
       do iter=1,niter
 
-         call col3_acc(z,r,d,n)
+         call col3_acc(z,r,scrd,n)
+!$acc    update host(z)
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'z=',z(i)
+         enddo
+c        stop
 
          rtz2=rtz1
-         scalar(1)=vlsc3_acc (z,r,mult,n)
+         scalar(1)=vlsc3_acc(z,r,mult,n)
          scalar(2)=vlsc32_acc(r,mult,binv,n)
+         write (6,*) 'scalar1,2',scalar(1),scalar(2)
+         stop
 
-         call gop_acc(scalar,w,'+  ',2)
+c!$acc    update device(scalar)
+cc        call gop_acc(scalar,w,'+  ',2)
+c!$acc    update host(scalar)
+
+         call gop(scalar,w,'+  ',2)
 
          rtz1=scalar(1)
          rbn2=sqrt(scalar(2)/vol)
+         write (6,*) 'rtz1,rbn2',rtz1,rbn2
+         stop
          if (iter.eq.1) rbn0 = rbn2
          if (param(22).lt.0) tol=abs(param(22))*rbn0
          if (tin.lt.0)       tol=abs(tin)*rbn0
+
+         write (6,*) 'tol=',tol
 
          ifprint_hmh = .false.
          if (nio.eq.0.and.ifprint.and.param(74).ne.0) ifprint_hmh=.true.
          if (nio.eq.0.and.istep.eq.1)                 ifprint_hmh=.true.
 
-         if (ifprint_hmh)
-     &      write(6,3002) istep,'  Hmholtz ' // name,
-     &                    iter,rbn2,h1(1),tol,h2(1),ifmcor
+c        if (ifprint_hmh)
+c    &      write(6,3002) istep,'  Hmholtz ' // name,
+c    &                    iter,rbn2,h1(1),tol,h2(1),ifmcor
 
 
 c        Always take at least one iteration   (for projection) pff 11/23/98
          IF (rbn2.LE.TOL.and.(iter.gt.1 .or. istep.le.5)) THEN
             NITER = ITER-1
-            if (nio.eq.0)
-     &         write(6,3000) istep,'  Hmholtz ' // name,
-     &                       niter,rbn2,rbn0,tol
+c           if (nio.eq.0)
+c    &         write(6,3000) istep,'  Hmholtz ' // name,
+c    &                       niter,rbn2,rbn0,tol
             goto 9999
          ENDIF
  
@@ -231,13 +270,28 @@ c        Always take at least one iteration   (for projection) pff 11/23/98
          call axhelm_acc (w,p,h1,h2,imsh,isd)
          call dssum  (w,nx1,ny1,nz1)
          call col2_acc   (w,mask,n)
+
+c!$acc    update host(w)
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'w=',w(i)
+         enddo
+c        stop
 c
          rho0 = rho
          rho  = glsc3_acc(w,p,mult,n)
          alpha=rtz1/rho
          alphm=-alpha
+         write (6,*) 'rtz1=',rtz1
+         write (6,*) 'rho=',rho
+         stop
          call add2s2_acc(x,p ,alpha,n)
          call add2s2_acc(r,w ,alphm,n)
+
+!$acc    update host(x)
+         do i=1,lx1*ly1*lz1*nelv
+            write (6,*) 'x=',x(i)
+         enddo
+         stop
  
 c        Generate tridiagonal matrix for Lanczos scheme
          if (iter.eq.1) then
@@ -249,20 +303,21 @@ c        Generate tridiagonal matrix for Lanczos scheme
             upper(iter-1)  = -beta * rho0 / sqrt(rtz2 * rtz1)
          endif
  1000 enddo
+
+c!$acc end data
       niter = iter-1
 c
-      if (nio.eq.0) write (6,3001) istep, '  Error Hmholtz ' // name,
-     &                             niter,rbn2,rbn0,tol
+c     if (nio.eq.0) write (6,3001) istep, '  Error Hmholtz ' // name,
+c    &                             niter,rbn2,rbn0,tol
 
 
- 3000 format(i11,a,1x,I7,1p4E13.4)
- 3001 format(i11,a,1x,I7,1p4E13.4)
- 3002 format(i11,a,1x,I7,1p4E13.4,l4)
+c3000 format(i11,a,1x,I7,1p4E13.4)
+c3001 format(i11,a,1x,I7,1p4E13.4)
+c3002 format(i11,a,1x,I7,1p4E13.4,l4)
  9999 continue
       niterhm = niter
       ifsolv = .false.
  
-!$ACC END DATA
 
       return
       end
@@ -896,145 +951,6 @@ C
       return
       END
 C
-c=======================================================================
-      subroutine setprec_acc (dpcm1,helm1,helm2,imsh,isd)
-C-------------------------------------------------------------------
-C
-C     Generate diagonal preconditioner for the Helmholtz operator.
-C
-C-------------------------------------------------------------------
-      include 'SIZE'
-      include 'WZ'
-      include 'DXYZ'
-      include 'GEOM'
-      include 'INPUT'
-      include 'TSTEP'
-      include 'MASS'
-      REAL            DPCM1 (LX1,LY1,LZ1,1)
-      COMMON /FASTMD/ IFDFRM(LELT), IFFAST(LELT), IFH2, IFSOLV
-      LOGICAL IFDFRM, IFFAST, IFH2, IFSOLV
-      REAL            HELM1(NX1,NY1,NZ1,1), HELM2(NX1,NY1,NZ1,1)
-      REAL YSM1(LY1)
-
-      nel=nelt
-      if (imsh.eq.1) nel=nelv
-
-      ntot = nel*nx1*ny1*nz1
-
-      CALL RZERO (DPCM1,NTOT)
-
-      DO 1000 IE=1,NEL
-
-        DO 320 IQ=1,NX1
-        DO 320 IZ=1,NZ1
-        DO 320 IY=1,NY1
-        DO 320 IX=1,NX1
-           DPCM1(IX,IY,IZ,IE) = DPCM1(IX,IY,IZ,IE) + 
-     $                          G1M1(IQ,IY,IZ,IE) * DXTM1(IX,IQ)**2
-  320   CONTINUE
-        DO 340 IQ=1,NY1
-        DO 340 IZ=1,NZ1
-        DO 340 IY=1,NY1
-        DO 340 IX=1,NX1
-           DPCM1(IX,IY,IZ,IE) = DPCM1(IX,IY,IZ,IE) + 
-     $                          G2M1(IX,IQ,IZ,IE) * DYTM1(IY,IQ)**2
-  340   CONTINUE
-        IF (LDIM.EQ.3) THEN
-           DO 360 IQ=1,NZ1
-           DO 360 IZ=1,NZ1
-           DO 360 IY=1,NY1
-           DO 360 IX=1,NX1
-              DPCM1(IX,IY,IZ,IE) = DPCM1(IX,IY,IZ,IE) + 
-     $                             G3M1(IX,IY,IQ,IE) * DZTM1(IZ,IQ)**2
-  360      CONTINUE
-C
-C          Add cross terms if element is deformed.
-C
-           IF (IFDFRM(IE)) THEN
-              DO 600 IY=1,NY1,ny1-1
-              DO 600 IZ=1,NZ1,nz1-1
-              DPCM1(1,IY,IZ,IE) = DPCM1(1,IY,IZ,IE)
-     $            + G4M1(1,IY,IZ,IE) * DXTM1(1,1)*DYTM1(IY,IY)
-     $            + G5M1(1,IY,IZ,IE) * DXTM1(1,1)*DZTM1(IZ,IZ)
-              DPCM1(NX1,IY,IZ,IE) = DPCM1(NX1,IY,IZ,IE)
-     $            + G4M1(NX1,IY,IZ,IE) * DXTM1(NX1,NX1)*DYTM1(IY,IY)
-     $            + G5M1(NX1,IY,IZ,IE) * DXTM1(NX1,NX1)*DZTM1(IZ,IZ)
-  600         CONTINUE
-              DO 700 IX=1,NX1,nx1-1
-              DO 700 IZ=1,NZ1,nz1-1
-                 DPCM1(IX,1,IZ,IE) = DPCM1(IX,1,IZ,IE)
-     $            + G4M1(IX,1,IZ,IE) * DYTM1(1,1)*DXTM1(IX,IX)
-     $            + G6M1(IX,1,IZ,IE) * DYTM1(1,1)*DZTM1(IZ,IZ)
-                 DPCM1(IX,NY1,IZ,IE) = DPCM1(IX,NY1,IZ,IE)
-     $            + G4M1(IX,NY1,IZ,IE) * DYTM1(NY1,NY1)*DXTM1(IX,IX)
-     $            + G6M1(IX,NY1,IZ,IE) * DYTM1(NY1,NY1)*DZTM1(IZ,IZ)
-  700         CONTINUE
-              DO 800 IX=1,NX1,nx1-1
-              DO 800 IY=1,NY1,ny1-1
-                 DPCM1(IX,IY,1,IE) = DPCM1(IX,IY,1,IE)
-     $                + G5M1(IX,IY,1,IE) * DZTM1(1,1)*DXTM1(IX,IX)
-     $                + G6M1(IX,IY,1,IE) * DZTM1(1,1)*DYTM1(IY,IY)
-                 DPCM1(IX,IY,NZ1,IE) = DPCM1(IX,IY,NZ1,IE)
-     $                + G5M1(IX,IY,NZ1,IE) * DZTM1(NZ1,NZ1)*DXTM1(IX,IX)
-     $                + G6M1(IX,IY,NZ1,IE) * DZTM1(NZ1,NZ1)*DYTM1(IY,IY)
-  800         CONTINUE
-           ENDIF
-
-        ELSE  ! 2D
-
-           IZ=1
-           IF (IFDFRM(IE)) THEN
-              DO 602 IY=1,NY1,ny1-1
-                 DPCM1(1,IY,IZ,IE) = DPCM1(1,IY,IZ,IE)
-     $                + G4M1(1,IY,IZ,IE) * DXTM1(1,1)*DYTM1(IY,IY)
-                 DPCM1(NX1,IY,IZ,IE) = DPCM1(NX1,IY,IZ,IE)
-     $                + G4M1(NX1,IY,IZ,IE) * DXTM1(NX1,NX1)*DYTM1(IY,IY)
-  602         CONTINUE
-              DO 702 IX=1,NX1,nx1-1
-                 DPCM1(IX,1,IZ,IE) = DPCM1(IX,1,IZ,IE)
-     $                + G4M1(IX,1,IZ,IE) * DYTM1(1,1)*DXTM1(IX,IX)
-                 DPCM1(IX,NY1,IZ,IE) = DPCM1(IX,NY1,IZ,IE)
-     $                + G4M1(IX,NY1,IZ,IE) * DYTM1(NY1,NY1)*DXTM1(IX,IX)
-  702         CONTINUE
-           ENDIF
-
-        ENDIF
- 1000 CONTINUE
-C
-      CALL COL2    (DPCM1,HELM1,NTOT)
-      CALL ADDCOL3 (DPCM1,HELM2,BM1,NTOT)
-C
-C     If axisymmetric, add a diagonal term in the radial direction (ISD=2)
-C
-      IF (IFAXIS.AND.(ISD.EQ.2)) THEN
-         DO 1200 IEL=1,NEL
-C
-            IF (IFRZER(IEL)) THEN
-               CALL MXM(YM1(1,1,1,IEL),NX1,DATM1,NY1,YSM1,1)
-            ENDIF
-C
-            DO 1190 J=1,NY1
-            DO 1190 I=1,NX1
-               IF (YM1(I,J,1,IEL).NE.0.) THEN
-                  TERM1 = BM1(I,J,1,IEL)/YM1(I,J,1,IEL)**2
-                  IF (IFRZER(IEL)) THEN
-                     TERM2 =  WXM1(I)*WAM1(1)*DAM1(1,J)
-     $                       *JACM1(I,1,1,IEL)/YSM1(I)
-                  ELSE
-                     TERM2 = 0.
-                  ENDIF
-                  DPCM1(I,J,1,IEL) = DPCM1(I,J,1,IEL)
-     $                             + HELM1(I,J,1,IEL)*(TERM1+TERM2)
-               ENDIF
- 1190       CONTINUE
- 1200    CONTINUE
-      ENDIF
-C
-      CALL DSSUM (DPCM1,NX1,NY1,NZ1)
-      CALL INVCOL1 (DPCM1,NTOT)
-C
-      return
-      END
 c=======================================================================
       subroutine setprec (dpcm1,helm1,helm2,imsh,isd)
 C-------------------------------------------------------------------
@@ -3262,4 +3178,155 @@ c     stop
 
       return
       end
+c-----------------------------------------------------------------------
+      subroutine setprec_acc (dpcm1,helm1,helm2,imsh,isd)
+C-------------------------------------------------------------------
+C
+C     Generate diagonal preconditioner for the Helmholtz operator.
+C
+C-------------------------------------------------------------------
+      include 'SIZE'
+      include 'WZ'
+      include 'DXYZ'
+      include 'GEOM'
+      include 'INPUT'
+      include 'TSTEP'
+      include 'MASS'
+      REAL            DPCM1 (LX1,LY1,LZ1,1)
+      COMMON /FASTMD/ IFDFRM(LELT), IFFAST(LELT), IFH2, IFSOLV
+      LOGICAL IFDFRM, IFFAST, IFH2, IFSOLV
+      REAL            HELM1(NX1,NY1,NZ1,1), HELM2(NX1,NY1,NZ1,1)
+      REAL YSM1(LY1)
+
+      nel=nelt
+      if (imsh.eq.1) nel=nelv
+
+      ntot = nel*nx1*ny1*nz1
+
+c     The following lines provide a convenient debugging option
+c     call rone(dpcm1,ntot)
+c     if (ifield.eq.1) call copy(dpcm1,binvm1,ntot)
+c     if (ifield.eq.2) call copy(dpcm1,bintm1,ntot)
+c     return
+
+      CALL RZERO(DPCM1,NTOT)
+      DO 1000 IE=1,NEL
+
+        IF (IFAXIS) CALL SETAXDY ( IFRZER(IE) )
+
+        DO 320 IQ=1,NX1
+        DO 320 IZ=1,NZ1
+        DO 320 IY=1,NY1
+        DO 320 IX=1,NX1
+           DPCM1(IX,IY,IZ,IE) = DPCM1(IX,IY,IZ,IE) + 
+     $                          G1M1(IQ,IY,IZ,IE) * DXTM1(IX,IQ)**2
+  320   CONTINUE
+        DO 340 IQ=1,NY1
+        DO 340 IZ=1,NZ1
+        DO 340 IY=1,NY1
+        DO 340 IX=1,NX1
+           DPCM1(IX,IY,IZ,IE) = DPCM1(IX,IY,IZ,IE) + 
+     $                          G2M1(IX,IQ,IZ,IE) * DYTM1(IY,IQ)**2
+  340   CONTINUE
+        IF (LDIM.EQ.3) THEN
+           DO 360 IQ=1,NZ1
+           DO 360 IZ=1,NZ1
+           DO 360 IY=1,NY1
+           DO 360 IX=1,NX1
+              DPCM1(IX,IY,IZ,IE) = DPCM1(IX,IY,IZ,IE) + 
+     $                             G3M1(IX,IY,IQ,IE) * DZTM1(IZ,IQ)**2
+  360      CONTINUE
+C
+C          Add cross terms if element is deformed.
+C
+           IF (IFDFRM(IE)) THEN
+              DO 600 IY=1,NY1,ny1-1
+              DO 600 IZ=1,NZ1,nz1-1
+              DPCM1(1,IY,IZ,IE) = DPCM1(1,IY,IZ,IE)
+     $            + G4M1(1,IY,IZ,IE) * DXTM1(1,1)*DYTM1(IY,IY)
+     $            + G5M1(1,IY,IZ,IE) * DXTM1(1,1)*DZTM1(IZ,IZ)
+              DPCM1(NX1,IY,IZ,IE) = DPCM1(NX1,IY,IZ,IE)
+     $            + G4M1(NX1,IY,IZ,IE) * DXTM1(NX1,NX1)*DYTM1(IY,IY)
+     $            + G5M1(NX1,IY,IZ,IE) * DXTM1(NX1,NX1)*DZTM1(IZ,IZ)
+  600         CONTINUE
+              DO 700 IX=1,NX1,nx1-1
+              DO 700 IZ=1,NZ1,nz1-1
+                 DPCM1(IX,1,IZ,IE) = DPCM1(IX,1,IZ,IE)
+     $            + G4M1(IX,1,IZ,IE) * DYTM1(1,1)*DXTM1(IX,IX)
+     $            + G6M1(IX,1,IZ,IE) * DYTM1(1,1)*DZTM1(IZ,IZ)
+                 DPCM1(IX,NY1,IZ,IE) = DPCM1(IX,NY1,IZ,IE)
+     $            + G4M1(IX,NY1,IZ,IE) * DYTM1(NY1,NY1)*DXTM1(IX,IX)
+     $            + G6M1(IX,NY1,IZ,IE) * DYTM1(NY1,NY1)*DZTM1(IZ,IZ)
+  700         CONTINUE
+              DO 800 IX=1,NX1,nx1-1
+              DO 800 IY=1,NY1,ny1-1
+                 DPCM1(IX,IY,1,IE) = DPCM1(IX,IY,1,IE)
+     $                + G5M1(IX,IY,1,IE) * DZTM1(1,1)*DXTM1(IX,IX)
+     $                + G6M1(IX,IY,1,IE) * DZTM1(1,1)*DYTM1(IY,IY)
+                 DPCM1(IX,IY,NZ1,IE) = DPCM1(IX,IY,NZ1,IE)
+     $                + G5M1(IX,IY,NZ1,IE) * DZTM1(NZ1,NZ1)*DXTM1(IX,IX)
+     $                + G6M1(IX,IY,NZ1,IE) * DZTM1(NZ1,NZ1)*DYTM1(IY,IY)
+  800         CONTINUE
+           ENDIF
+
+        ELSE  ! 2D
+
+           IZ=1
+           IF (IFDFRM(IE)) THEN
+              DO 602 IY=1,NY1,ny1-1
+                 DPCM1(1,IY,IZ,IE) = DPCM1(1,IY,IZ,IE)
+     $                + G4M1(1,IY,IZ,IE) * DXTM1(1,1)*DYTM1(IY,IY)
+                 DPCM1(NX1,IY,IZ,IE) = DPCM1(NX1,IY,IZ,IE)
+     $                + G4M1(NX1,IY,IZ,IE) * DXTM1(NX1,NX1)*DYTM1(IY,IY)
+  602         CONTINUE
+              DO 702 IX=1,NX1,nx1-1
+                 DPCM1(IX,1,IZ,IE) = DPCM1(IX,1,IZ,IE)
+     $                + G4M1(IX,1,IZ,IE) * DYTM1(1,1)*DXTM1(IX,IX)
+                 DPCM1(IX,NY1,IZ,IE) = DPCM1(IX,NY1,IZ,IE)
+     $                + G4M1(IX,NY1,IZ,IE) * DYTM1(NY1,NY1)*DXTM1(IX,IX)
+  702         CONTINUE
+           ENDIF
+
+        ENDIF
+ 1000 CONTINUE
+C
+      CALL COL2    (DPCM1,HELM1,NTOT)
+      CALL ADDCOL3 (DPCM1,HELM2,BM1,NTOT)
+C
+C     If axisymmetric, add a diagonal term in the radial direction (ISD=2)
+C
+      IF (IFAXIS.AND.(ISD.EQ.2)) THEN
+         DO 1200 IEL=1,NEL
+C
+            IF (IFRZER(IEL)) THEN
+               CALL MXM(YM1(1,1,1,IEL),NX1,DATM1,NY1,YSM1,1)
+            ENDIF
+C
+            DO 1190 J=1,NY1
+            DO 1190 I=1,NX1
+               IF (YM1(I,J,1,IEL).NE.0.) THEN
+                  TERM1 = BM1(I,J,1,IEL)/YM1(I,J,1,IEL)**2
+                  IF (IFRZER(IEL)) THEN
+                     TERM2 =  WXM1(I)*WAM1(1)*DAM1(1,J)
+     $                       *JACM1(I,1,1,IEL)/YSM1(I)
+                  ELSE
+                     TERM2 = 0.
+                  ENDIF
+                  DPCM1(I,J,1,IEL) = DPCM1(I,J,1,IEL)
+     $                             + HELM1(I,J,1,IEL)*(TERM1+TERM2)
+               ENDIF
+ 1190       CONTINUE
+ 1200    CONTINUE
+      ENDIF
+
+c!$acc data present(dpcm1)
+c!$acc update device(dpcm1)   
+c      CALL DSSUM (DPCM1,NX1,NY1,NZ1)
+c!$acc update host(dpcm1)   
+c!$acc end data
+
+c     CALL INVCOL1 (DPCM1,NTOT)
+
+      return
+      END
 c-----------------------------------------------------------------------

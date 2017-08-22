@@ -226,8 +226,6 @@ c        stop
          rtz2=rtz1
          scalar(1)=vlsc3_acc(z,r,mult,n)
          scalar(2)=vlsc32_acc(r,mult,binv,n)
-         write (6,*) 'scalar1,2',scalar(1),scalar(2)
-         stop
 
 c!$acc    update device(scalar)
 cc        call gop_acc(scalar,w,'+  ',2)
@@ -237,8 +235,7 @@ c!$acc    update host(scalar)
 
          rtz1=scalar(1)
          rbn2=sqrt(scalar(2)/vol)
-         write (6,*) 'rtz1,rbn2',rtz1,rbn2
-         stop
+
          if (iter.eq.1) rbn0 = rbn2
          if (param(22).lt.0) tol=abs(param(22))*rbn0
          if (tin.lt.0)       tol=abs(tin)*rbn0
@@ -271,7 +268,7 @@ c    &                       niter,rbn2,rbn0,tol
          call dssum  (w,nx1,ny1,nz1)
          call col2_acc   (w,mask,n)
 
-c!$acc    update host(w)
+!$acc    update host(w)
          do i=1,lx1*ly1*lz1*nelv
 c           write (6,*) 'w=',w(i)
          enddo
@@ -283,24 +280,29 @@ c
          alphm=-alpha
          write (6,*) 'rtz1=',rtz1
          write (6,*) 'rho=',rho
-         stop
+c        stop
          call add2s2_acc(x,p ,alpha,n)
          call add2s2_acc(r,w ,alphm,n)
 
-!$acc    update host(x)
+c!$acc    update host(r)
          do i=1,lx1*ly1*lz1*nelv
-            write (6,*) 'x=',x(i)
+c           write (6,*) 'r=',r(i)
          enddo
-         stop
+c        stop
  
 c        Generate tridiagonal matrix for Lanczos scheme
          if (iter.eq.1) then
             krylov = krylov+1
             diagt(iter) = rho/rtz1
+            write (6,*) 'krylov,diagt(1)',krylov,diagt(1)
+c           stop
          elseif (iter.le.maxcg) then
             krylov = krylov+1
             diagt(iter)    = (beta**2 * rho0 + rho ) / rtz1
             upper(iter-1)  = -beta * rho0 / sqrt(rtz2 * rtz1)
+            write (6,*)
+     $      'krylov,diagt(2),upper(1)',krylov,diagt(2),upper(1)
+c           stop
          endif
  1000 enddo
 

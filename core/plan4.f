@@ -145,13 +145,18 @@ c        call chktcg1_acc(tol,res1,h1,h2,v1mask,vmult,imesh,isd)
 
          call cggo_acc(dv1,res1,h1,h2,v1mask,vmult,imesh,tol1,nmxh,1,
      $                 binvm1)
+         call cggo_acc(dv2,res2,h1,h2,v2mask,vmult,imesh,tol2,nmxh,2,
+     $                 binvm1)
+         call cggo_acc(dv3,res3,h1,h2,v3mask,vmult,imesh,tol3,nmxh,3,
+     $                 binvm1)
 
-         do i=1,lx1*ly1*lz1
-            write (6,*) 'dv1=',dv1(i,1,1,1)
-            write (6,*) 'dv2=',dv2(i,1,1,1)
-            write (6,*) 'dv3=',dv3(i,1,1,1)
+!$acc    update host(dv1,dv2,dv3)
+
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'dv1=',dv1(i,1,1,1)
+c           write (6,*) 'dv2=',dv2(i,1,1,1)
+c           write (6,*) 'dv3=',dv3(i,1,1,1)
          enddo
-         stop
 
 c below gives correct values in iterations
 c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310  
@@ -160,8 +165,16 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vx,dv1,n)      
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
+!$acc update host(vx,vy,vz)
 !$acc exit data
 
+         do i=1,lx1*ly1*lz1*nelv
+c           write (6,*) 'vx=',vx(i,1,1,1)
+c           write (6,*) 'vy=',vy(i,1,1,1)
+c           write (6,*) 'vz=',vz(i,1,1,1)
+         enddo
+c        stop
+         
          IF (NIO.EQ.0) THEN
             WRITE(6,'(13X,A,1p2e13.4)')
      &         'L1/L2 DIV(V)        ',DIV1,DIV2

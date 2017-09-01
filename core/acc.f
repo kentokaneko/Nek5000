@@ -29,7 +29,7 @@ c-----------------------------------------------------------------------
 !$acc enter data copyin(v1mask,v2mask,v3mask,pmask,tmask,omask,vmult)
 !$acc enter data copyin(tmult,b1mask,b2mask,b3mask,bpmask)
 !$acc enter data copyin(v1mask,v2mask,v3mask,pmask,tmask,omask)
-!$acc enter data copyin(pmult,tmult,vmult)
+!$acc enter data copyin(tmult,vmult)
 !$acc enter data copyin(dxm1,dxtm1,w3m1)
 !$acc enter data copyin(bm1,bm1lag,binvm1,bintm1)
 !$acc enter data copyin(jacm1,jacmi)
@@ -539,12 +539,32 @@ c
       call chck('abb')
       call makeuf_acc    ! paul and som
       call chck('bbb')
-      call advab_acc
+      if (istep.eq.1) then
+         call advab_acc
+      else
+!$acc    update host(bfx,bfy,bfz)
+         call advab
+!$acc    update device(bfx,bfy,bfz)
+      endif
       call chck('cbb')
       call makeabf_acc
+      if (istep.eq.2) then 
+         call rzero_acc(bfx,lx1*ly1*lz1*nelv)
+         call rzero_acc(bfy,lx1*ly1*lz1*nelv)
+         call rzero_acc(bfz,lx1*ly1*lz1*nelv)
+      endif
       call chck('dbb')
       call makebdf_acc
       call chck('ebb')
+      if (istep.eq.2) then
+!$acc    update host(bfx,bfy,bfz)
+         do i=1,lx1*ly1*lz1
+            write (6,*) 'bfx=',bfx(i,1,1,1)
+            write (6,*) 'bfy=',bfy(i,1,1,1)
+            write (6,*) 'bfz=',bfz(i,1,1,1)
+         enddo
+         stop
+      endif
 
       return
       end
@@ -659,7 +679,6 @@ c-------------------------------------------------------------------
       include 'SIZE'
       real jggl(lxd,lx1),dggl(lxd,lx1)
 
-
       parameter (ldg=lxd**3,lwkd=4*lxd*lxd)
       common /dgrad/ d(ldg),dt(ldg),dg(ldg),dgt(ldg),jgl(ldg),jgt(ldg)
      $             , wkd(lwkd)
@@ -689,7 +708,8 @@ C-----------------------------------------------------------------------
      $ ,             ta3 (LX1,LY1,LZ1,LELV)
       ntot1 = nx1*ny1*nz1*nelv
 
-!$acc data create (ta1,ta2,ta3,ab)
+!$acc data create (ta1,ta2,ta3)
+
       ab0 = ab(1)
       ab1 = ab(2)
       ab2 = ab(3)
@@ -702,16 +722,17 @@ C-----------------------------------------------------------------------
       call copy_acc (aby1,bfy,ntot1)
       call add2s1_acc (bfx,ta1,ab0,ntot1)
       call add2s1_acc (bfy,ta2,ab0,ntot1)
+
       call add3s2_acc (ta3,abz1,abz2,ab1,ab2,ntot1)
       call copy_acc (abz2,abz1,ntot1)
       call copy_acc (abz1,bfz,ntot1)
-      call add2s1 (bfz,ta3,ab0,ntot1)
+      call add2s1_acc (bfz,ta3,ab0,ntot1)
 
-
-cc    if(.not.iflomach)
-      call col2_acc (bfx,vtrans,ntot1)
-      call col2_acc (bfy,vtrans,ntot1)
-      call col2_acc (bfz,vtrans,ntot1)
+      if (.not.iflomach) then
+         call col2_acc (bfx,vtrans,ntot1)
+         call col2_acc (bfy,vtrans,ntot1)
+         call col2_acc (bfz,vtrans,ntot1)
+      endif
 
 !$acc end data
 
@@ -1275,6 +1296,8 @@ c-----------------------------------------------------------------------
       real    du (lx1,ly1,lz1,lelt)
       real    u  (lx1,ly1,lz1,lelt)
 
+      real cvx(lxd,lyd,lzd,nelv,3)
+
       real jggl(lxd,lx1),dggl(lxd,lx1)
       save jggl,dggl
 
@@ -1293,7 +1316,39 @@ c-----------------------------------------------------------------------
       etime1=dnekclock()
 
       call chck('q41')
-      call convop_fst_3d_acc(du,u,vxd,vyd,vzd,bm1,jggl,dggl)
+
+c      if (istep.eq.2) then
+c!$acc    update host(vxd,vyd,vzd)
+c         do i=1,lxd*lyd*lzd
+c            write (6,*) 'vxd=',vxd(i,1,1,1)
+c            write (6,*) 'vyd=',vyd(i,1,1,1)
+c            write (6,*) 'vzd=',vzd(i,1,1,1)
+c         enddo
+c         stop
+c      endif
+
+      if (istep.eq.1) then
+         do i=1,lx1*lxd
+            write (6,*) '1 test jggl=',jggl(i,1)
+            write (6,*) '1 test dggl=',dggl(i,1)
+         enddo
+         call convop_fst_3d_acc(du,u,vxd,vyd,vzd,bm1,jggl,dggl)
+      else
+!$acc    update host(u,vxd,vyd,vzd)
+         do i=1,lxd*lyd*lzd*nelv
+            cvx(i,1,1,1,1) = vxd(i,1,1,1)
+            cvx(i,1,1,1,2) = vyd(i,1,1,1)
+            cvx(i,1,1,1,3) = vzd(i,1,1,1)
+         enddo
+         call convop_fst_3d(du,u,cvx,lx1,lxd,nelv)
+
+         do i=1,lx1*ly1*lz1
+c           write (6,*) 'du=',du(i,1,1,1)
+         enddo
+c        stop
+!$acc    update device(du)         
+      endif
+
       call chck('q51')
 
       tadvc=tadvc+(dnekclock()-etime1)
@@ -1373,7 +1428,6 @@ c     du = J   ( C . grad Ju)
          enddo
 !$acc    end loop
 
-c        l=0
 !$acc    loop collapse(2) vector
          do i=1,lxd*lyd
          do k=1,lzd
@@ -1385,11 +1439,8 @@ c        l=0
                w1 = w1 + jj(k,r) * wk3(i,1,r) ! JxJxD u
                w2 = w2 + jj(k,r) * wk4(i,1,r) ! JxDxJ u
                w3 = w3 + dd(k,r) * wk5(i,1,r) ! DxJxJ u
-c              w3 = w3 + jj(k,r) * wk5(i,1,r) ! DxJxJ u
             enddo
 !$acc       end loop
-c           l=l+1
-c           wk6(i,1,k)=w1*c(l,e,1)+w2*c(l,e,2)+w3*c(l,e,3) ! c1*ur+c2*us+c3*ut
             wk6(i,1,k)=w1*vxd(i,1,k,e)
      $                +w2*vyd(i,1,k,e)
      $                +w3*vzd(i,1,k,e) ! c1*ur+c2*us+c3*ut
@@ -1449,4 +1500,313 @@ c           du(i,j,1,e) = w1*b(i,j,1,e)
       return
       end
 
+c-------------------------------------------------------------------
+      subroutine plan4_acc_update_device
+c-----------------------------------------------------------------------
+      include 'SIZE'
+      include 'TOTAL'    
+
+      parameter (lg=lx1*ly1*lz1*lelt)
+      parameter (maxcg=900)
+
+      common /tdarray/ diagt(maxcg),upper(maxcg)
+
+      common /scrcg/ d(lg), scalar(2)
+      common /scrcg2/ r(lg), w(lg), p(lg), z(lg)
+
+!$acc update device(vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
+!$acc update device(abx1,aby1,abz1,abx2,aby2,abz2,vdiff_e)
+!$acc update device(vtrans,vdiff,bfx,bfy,bfz,cflf,c_vx,fw)
+!$acc update device(bmnv,bmass,bdivw,bx,by,bz,pm,bmx,bmy,bmz)
+!$acc update device(vx,vy,vz,pr,t,vx_e,vy_e,vz_e)
+!$acc update device(bbx1,bby1,bbz1,bbx2,bby2,bbz2,bxlag,bylag,bzlag)
+!$acc update device(pmlag,prlag)
+!$acc update device(qtl,usrdiv)
+!$acc update device(v1mask,v2mask,v3mask,pmask,tmask,omask,vmult)
+!$acc update device(tmult,b1mask,b2mask,b3mask,bpmask)
+!$acc update device(v1mask,v2mask,v3mask,pmask,tmask,omask)
+!$acc update device(tmult,vmult)
+!$acc update device(dxm1,dxtm1,w3m1)
+!$acc update device(bm1,bm1lag,binvm1,bintm1)
+!$acc update device(jacm1,jacmi)
+!$acc update device(xm1,ym1,zm1)
+!$acc update device(unx,uny,unz,area)
+!$acc update device(rxm1,sxm1,txm1)
+!$acc update device(rym1,sym1,tym1)
+!$acc update device(rzm1,szm1,tzm1)
+!$acc update device(rxm2,sxm2,txm2)
+!$acc update device(rym2,sym2,tym2)
+!$acc update device(rzm2,szm2,tzm2)
+!$acc update device(g1m1,g2m1,g3m1,g4m1,g5m1,g6m1)
+!$acc update device(cbc,bc)
+!$acc update device(abx1,aby1,abz1,abx2,aby2,abz2)
+!$acc update device(ab)
+!$acc update device(vtrans)
+!$acc update device(vxlag,vylag,vzlag)
+!$acc update device(bd)
+!$acc update device(pr,prlag,qtl,usrdiv)
+!$acc update device(vtrans,vdiff)
+!$acc update device(param,nelfld)
+!$acc update device(vxd,vyd,vzd)
+!$acc update device(diagt,upper)
+!$acc update device(d,scalar,r,w,p,z)
+!$acc update device(ibc_acc)
+!$acc update device(c_vx)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine hsmg_acc_update_device
+      include 'SIZE'
+      include 'HSMG'
+
+!$acc update device(mg_nx)
+!$acc update device(mg_ny,mg_nz)
+!$acc update device(mg_nh,mg_nhz)
+!$acc update device(mg_gsh_schwarz_handle)
+!$acc update device(mg_gsh_handle)
+!$acc update device(mg_rstr_wt_index)
+!$acc update device(mg_mask_index)
+!$acc update device(mg_solve_index)
+!$acc update device(mg_fast_s_index)
+!$acc update device(mg_fast_d_index)
+!$acc update device(mg_schwarz_wt_index)
+!$acc update device(mg_g_index)
+
+!$acc update device(mg_jh)
+!$acc update device(mg_jht)
+!$acc update device(mg_jhfc )
+!$acc update device(mg_jhfct)
+!$acc update device(mg_ah)
+!$acc update device(mg_bh)
+!$acc update device(mg_dh)
+!$acc update device(mg_dht)
+!$acc update device(mg_zh)
+!$acc update device(mg_rstr_wt)
+!$acc update device(mg_mask)
+!$acc update device(mg_fast_s)
+!$acc update device(mg_fast_d)
+!$acc update device(mg_schwarz_wt)
+!$acc update device(mg_solve_e)
+!$acc update device(mg_solve_r)
+!$acc update device(mg_h1)
+!$acc update device(mg_h2)
+!$acc update device(mg_b)
+!$acc update device(mg_g)
+!$acc update device(mg_work)
+!$acc update device(mg_work2)
+!$acc update device(mg_worke)
+
+!$acc update device(mg_imask)
+
+!$acc update device(mg_h1_n)
+!$acc update device(p_mg_h1)
+!$acc update device(p_mg_b)
+!$acc update device(p_mg_msk)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine plan4_acc_update_host
+c-----------------------------------------------------------------------
+      include 'SIZE'
+      include 'TOTAL'    
+
+      parameter (lg=lx1*ly1*lz1*lelt)
+      parameter (maxcg=900)
+
+      common /tdarray/ diagt(maxcg),upper(maxcg)
+
+      common /scrcg/ d(lg), scalar(2)
+      common /scrcg2/ r(lg), w(lg), p(lg), z(lg)
+
+!$acc update host(vxlag,vylag,vzlag,tlag,vgradt1,vgradt2)
+!$acc update host(abx1,aby1,abz1,abx2,aby2,abz2,vdiff_e)
+!$acc update host(vtrans,vdiff,bfx,bfy,bfz,cflf,c_vx,fw)
+!$acc update host(bmnv,bmass,bdivw,bx,by,bz,pm,bmx,bmy,bmz)
+!$acc update host(vx,vy,vz,pr,t,vx_e,vy_e,vz_e)
+!$acc update host(bbx1,bby1,bbz1,bbx2,bby2,bbz2,bxlag,bylag,bzlag)
+!$acc update host(pmlag,prlag)
+!$acc update host(qtl,usrdiv)
+!$acc update host(v1mask,v2mask,v3mask,pmask,tmask,omask,vmult)
+!$acc update host(tmult,b1mask,b2mask,b3mask,bpmask)
+!$acc update host(v1mask,v2mask,v3mask,pmask,tmask,omask)
+!$acc update host(tmult,vmult)
+!$acc update host(dxm1,dxtm1,w3m1)
+!$acc update host(bm1,bm1lag,binvm1,bintm1)
+!$acc update host(jacm1,jacmi)
+!$acc update host(xm1,ym1,zm1)
+!$acc update host(unx,uny,unz,area)
+!$acc update host(rxm1,sxm1,txm1)
+!$acc update host(rym1,sym1,tym1)
+!$acc update host(rzm1,szm1,tzm1)
+!$acc update host(rxm2,sxm2,txm2)
+!$acc update host(rym2,sym2,tym2)
+!$acc update host(rzm2,szm2,tzm2)
+!$acc update host(g1m1,g2m1,g3m1,g4m1,g5m1,g6m1)
+!$acc update host(cbc,bc)
+!$acc update host(abx1,aby1,abz1,abx2,aby2,abz2)
+!$acc update host(ab)
+!$acc update host(vtrans)
+!$acc update host(vxlag,vylag,vzlag)
+!$acc update host(bd)
+!$acc update host(pr,prlag,qtl,usrdiv)
+!$acc update host(vtrans,vdiff)
+!$acc update host(param,nelfld)
+!$acc update host(vxd,vyd,vzd)
+!$acc update host(diagt,upper)
+!$acc update host(d,scalar,r,w,p,z)
+!$acc update host(ibc_acc)
+!$acc update host(c_vx)
+
+      return
+      end
+c-----------------------------------------------------------------------
+c      subroutine convop_fst_3d_acc2(du,u,c1,c2,c3,b,jj,dd)
+cc-------------------------------------------------------------------
+c      include 'SIZE'
+c
+cc     apply convecting field c to scalar field u
+cc
+cc           T
+cc     du = J   ( C . grad Ju)
+c
+c      real du(lx1,ly1,lz1,lelt),u(lx1,ly1,lz1,lelt),b(lx1,ly1,lz1,lelt)
+c      real c1(lxd*lyd*lzd,lelt),
+c     $     c2(lxd*lyd*lzd,lelt),
+c     $     c3(lxd*lyd*lzd,lelt)
+c
+c      real jj(lxd,lx1)
+c      real dd(lxd,lx1)
+c
+c      real wk1(lxd,ly1,lz1),wk2(lxd,ly1,lz1)
+c      real wk3(lxd,lyd,lz1),wk4(lxd,lyd,lz1)
+c      real wk5(lxd,lyd,lz1),wk6(lxd,lyd,lzd)
+c
+c      integer e,p,q,r
+c
+c      call chck('p11')
+c
+c!$acc data create(wk1,wk2,wk3,wk4,wk5,wk6)
+c      do e=1,nelv
+c!$acc    kernels
+c         do j=1,ly1*lz1
+c         do i=1,lxd
+c            w1 = 0.0
+c            w2 = 0.0
+c!$acc       loop seq
+c            do p=1,lx1
+c               w1 = w1 + dd(i,p) * u(p,j,1,e) ! Grad:  crs->fine
+c               w2 = w2 + jj(i,p) * u(p,j,1,e) ! Inter: crs->fine
+c            enddo
+c!$acc       end loop
+c            wk1(i,j,1)=w1
+c            wk2(i,j,1)=w2
+c         enddo
+c         enddo
+c!$acc    end kernels
+c
+c!$acc    kernels
+c         do k=1,lz1
+c         do i=1,lxd
+c         do j=1,lyd
+c            w1 = 0.0
+c            w2 = 0.0
+c            w3 = 0.0
+c!$acc       loop seq
+c            do q=1,ly1
+c               w1 = w1 + jj(j,q) * wk1(i,q,k) ! JxD u
+c               w2 = w2 + dd(j,q) * wk2(i,q,k) ! DxJ u
+c               w3 = w3 + jj(j,q) * wk2(i,q,k) ! JxJ u
+c            enddo
+c!$acc       end loop
+c            wk3(i,j,k)=w1
+c            wk4(i,j,k)=w2
+c            wk5(i,j,k)=w3
+c         enddo
+c         enddo
+c         enddo
+c!$acc    end kernels
+c
+cc        l=0
+c!$acc    kernels
+c         do i=1,lxd*lyd
+c         do k=1,lzd
+c            w1 = 0.0
+c            w2 = 0.0
+c            w3 = 0.0
+c!$acc       loop seq
+c            do r=1,lz1
+c               w1 = w1 + jj(k,r) * wk3(i,1,r) ! JxJxD u
+c               w2 = w2 + jj(k,r) * wk4(i,1,r) ! JxDxJ u
+c               w3 = w3 + dd(k,r) * wk5(i,1,r) ! DxJxJ u
+cc              w3 = w3 + jj(k,r) * wk5(i,1,r) ! DxJxJ u
+c            enddo
+c!$acc       end loop
+cc           l=l+1
+cc           wk6(i,1,k)=w1*c(l,e,1)+w2*c(l,e,2)+w3*c(l,e,3) ! c1*ur+c2*us+c3*ut
+c            wk6(i,1,k)=w1*vxd(i,1,k,e)
+c     $                +w2*vyd(i,1,k,e)
+c     $                +w3*vzd(i,1,k,e) ! c1*ur+c2*us+c3*ut
+c         enddo
+c         enddo
+c!$acc    end kernels
+c
+c!$acc    update host(wk6)
+c         do i=1,lx1*ly1*lz1
+c            write (6,*) 'wk6=',wk6(i,1,1)
+c         enddo
+c         stop
+c
+c!! START COLLAPSING BACK with J'
+c
+c!$acc    loop collapse(2) vector
+c         do i=1,lxd*lyd
+c         do k=1,lz1
+c            w1 = 0.0
+c!$acc       loop seq
+c            do r=1,lzd                        !  T
+c               w1 = w1 + jj(r,k) * wk6(i,1,r) ! J  x I x I w6
+c            enddo
+c!$acc       end loop
+c            wk5(i,1,k)=w1
+c         enddo
+c         enddo
+c!$acc    end loop
+c
+c!$acc    loop collapse(3) vector
+c         do k=1,lz1
+c         do i=1,lxd
+c         do j=1,ly1
+c            w1 = 0.0
+c!$acc       loop seq
+c            do q=1,lyd
+c               w1 = w1 + jj(q,j) * wk5(i,q,k)
+c            enddo
+c!$acc       end loop
+c            wk2(i,j,k)=w1
+c         enddo
+c         enddo
+c         enddo
+c!$acc    end loop
+c
+c!$acc    loop collapse(2) vector
+c         do j=1,ly1*lz1
+c         do i=1,lx1
+c            w1 = 0.0
+c!$acc       loop seq
+c            do p=1,lxd
+c               w1 = w1 + jj(p,i) * wk2(p,j,1)
+c            enddo
+c!$acc       end loop
+cc           du(i,j,1,e) = w1*b(i,j,1,e)
+c            du(i,j,1,e) = w1
+c         enddo
+c         enddo
+c!$acc    end loop
+c      enddo
+c!$acc end data
+c
+c      return
+c      end
 c-------------------------------------------------------------------

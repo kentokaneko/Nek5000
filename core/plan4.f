@@ -47,10 +47,44 @@ c
       ntot1  = nx1*ny1*nz1*nelv
       n      = ntot1
 
+      write (6,*) 'top of plan4_acc'
+
       if (igeom.eq.1) then
-         call plan4_acc_data_copyin()
-         if (istep.eq.1) call hsmg_acc_data_copyin()
-         call makef_acc
+         if (istep.eq.1) then
+            call plan4_acc_data_copyin
+            call hsmg_acc_data_copyin
+         else
+            call plan4_acc_update_device
+            call hsmg_acc_update_device
+         endif
+
+c         if (istep.eq.2) then
+c!$acc       update host(vx,vy,vz)
+c            do i=1,lx1*ly1*lz1
+c               write (6,*) 'vx=',vx(i,1,1,1)
+c               write (6,*) 'vy=',vy(i,1,1,1)
+c               write (6,*) 'vz=',vz(i,1,1,1)
+c               write (6,*) 'pr=',pr(i,1,1,1)
+c            enddo
+c            stop
+c         endif
+         
+         if (istep.eq.1) then
+            call makef_acc
+         else
+            call makef
+!$acc    update device(bfx,bfy,bfz)
+         endif
+
+         if (istep.eq.2) then
+!$acc       update host(bfx,bfy,bfz)
+            do i=1,lx1*ly1*lz1
+c              write (6,*) 'bfx=',bfx(i,1,1,1)
+c              write (6,*) 'bfy=',bfy(i,1,1,1)
+c              write (6,*) 'bfz=',bfz(i,1,1,1)
+            enddo
+c           stop
+         endif
 
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
          call sumab_acc(vy_e,vy,vylag,n,ab,nab)
@@ -74,7 +108,11 @@ c        first, compute pressure
          npres=icalld
          etime1=dnekclock()
 
-!$acc    enter data copyin(h1,h2,respr,pmask,res1,res2,res3,dv1,dv2,dv3)
+         if (istep.eq.1) then
+!$acc       enter data copyin(h1,h2,respr,pmask,res1,res2,res3)
+!$acc       enter data copyin(dv1,dv2,dv3)
+         endif
+            
 
          call crespsp_acc(respr)
 
@@ -110,6 +148,13 @@ c        first, compute pressure
          call chktcg1_acc(tol3,res1,h1,h2,v3mask,vmult,imesh,3)
 
          write (6,*) 'maxit=',nmxh
+         write (6,*) '   '
+         write (6,*) '   '
+         write (6,*) '   '
+         write (6,*) '   '
+         write (6,*) '   '
+         write (6,*) '   '
+         write (6,*) '   '
 
          call cggo_acc(dv1,res1,h1,h2,v1mask,vmult,imesh,tol1,nmxh,1,
      $                 binvm1)
@@ -134,23 +179,27 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
 
-!$acc    update host(pr)
-!$acc    update host(vx,vy,vz)
+!$acc    update host(pr,vx,vy,vz)
 
-         do i=1,lx1*ly1*lz1*nelv
-            write (6,*) 'pr=',pr(i,1,1,1)
-         enddo
+         if (istep.eq.2) then
+            do i=1,lx1*ly1*lz1*nelv
+               write (6,*) 'pr=',pr(i,1,1,1)
+            enddo
+            stop
 
-         do i=1,lx1*ly1*lz1
-            write (6,*) 'vx=',vx(i,1,1,1)
-            write (6,*) 'vy=',vy(i,1,1,1)
-            write (6,*) 'vz=',vz(i,1,1,1)
-         enddo
+            do i=1,lx1*ly1*lz1
+               write (6,*) 'vx=',vx(i,1,1,1)
+               write (6,*) 'vy=',vy(i,1,1,1)
+               write (6,*) 'vz=',vz(i,1,1,1)
+            enddo
+            stop
+         endif
 
-         call outpost(vx,vy,vz,pr,t,'gp4')
-         stop
+c        call outpost(vx,vy,vz,pr,t,'gp4')
+c        stop
 
-!$acc exit data
+
+c!$acc exit data
 
          IF (NIO.EQ.0) THEN
             WRITE(6,'(13X,A,1p2e13.4)')
@@ -164,6 +213,8 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          ENDIF
  
       endif
+
+      if (igeom.eq.2) call plan4_acc_update_host
  
       return
       end

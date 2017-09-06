@@ -293,36 +293,46 @@ c-----------------------------------------------------------------------
       real v3(lx1,ly1,lz1,lelt)
       real tmpu1,tmpu2,tmpu3
 
-!$ACC DATA PRESENT (d (nx1,nx1))
-!$ACC&     PRESENT (u1(nx1,ny1,nz1,nelv))
-!$ACC&     PRESENT (u2(nx1,ny1,nz1,nelv),u3(nx1,ny1,nz1,nelv))
-!$ACC$     PRESENT (v1(nx1,ny1,nz1,nelv),v2(nx1,ny1,nz1,nelv))
-!$ACC&     PRESENT (v3(nx1,ny1,nz1,nelv))
-!$ACC PARALLEL LOOP COLLAPSE(4) GANG WORKER VECTOR
-!$ACC&    PRIVATE(tmpu1,tmpu2,tmpu3)
-!dir$ NOBLOCKING
+!$acc update host(d,u1,u2,u3,v1)
+c     call outpost(u1,u2,u3,d,v1,'wgd')
+c     stop
+
+!$acc data present (d (nx1,nx1))
+!$acc&     present (u1(nx1,ny1,nz1,nelv))
+!$acc&     present (u2(nx1,ny1,nz1,nelv),u3(nx1,ny1,nz1,nelv))
+!$acc$     present (v1(nx1,ny1,nz1,nelv),v2(nx1,ny1,nz1,nelv))
+!$acc&     present (v3(nx1,ny1,nz1,nelv))
+
+!$acc parallel loop collapse(4) gang worker vector
+!$acc&    private(tmpu1,tmpu2,tmpu3)
+
+cc!dir$ noblocking
+c!$acc kernels
       do e=1,nelv
-         do k=1,nz1
-            do j=1,ny1
-               do i=1,nx1
-                  tmpu1 = 0.0
-                  tmpu2 = 0.0
-                  tmpu3 = 0.0
-!$ACC LOOP SEQ
-                  do l=1,nx1
-                     tmpu1 = tmpu1 + d(i,l)*u1(l,j,k,e)
-                     tmpu2 = tmpu2 + d(j,l)*u2(i,l,k,e)
-                     tmpu3 = tmpu3 + d(k,l)*u3(i,j,l,e)
-                  enddo
-                  v1(i,j,k,e) = tmpu1
-                  v2(i,j,k,e) = tmpu2
-                  v3(i,j,k,e) = tmpu3
-               enddo
-            enddo
+      do k=1,nz1
+      do j=1,ny1
+      do i=1,nx1
+         tmpu1 = 0.0
+         tmpu2 = 0.0
+         tmpu3 = 0.0
+!$acc    loop seq
+         do l=1,nx1
+            tmpu1 = tmpu1 + d(i,l)*u1(l,j,k,e)
+            tmpu2 = tmpu2 + d(j,l)*u2(i,l,k,e)
+            tmpu3 = tmpu3 + d(k,l)*u3(i,j,l,e)
          enddo
+!$acc    end loop
+         v1(i,j,k,e) = tmpu1
+         v2(i,j,k,e) = tmpu2
+         v3(i,j,k,e) = tmpu3
       enddo
-!$ACC END PARALLEL LOOP
-!$ACC END DATA
+      enddo
+      enddo
+      enddo
+c!$acc end kernels
+!$acc end parallel loop
+
+!$acc end data
       end
 c-----------------------------------------------------------------------
       subroutine cresvsp_acc (resv1,resv2,resv3,h1,h2)

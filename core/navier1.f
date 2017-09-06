@@ -2202,22 +2202,21 @@ C-----------------------------------------------------------------------
       include 'INPUT'
       include 'SOLN'
       include 'TSTEP'
-C
+
       NTOT1 = NX1*NY1*NZ1*NELV
-C
-c      DO 100 ILAG=NBDINP-1,2,-1
+
+c     DO 100 ILAG=NBDINP-1,2,-1
       DO 100 ILAG=3-1,2,-1
          call copy_acc(VXLAG(1,1,1,1,ILAG),VXLAG(1,1,1,1,ILAG-1),NTOT1)
          call copy_acc(VYLAG(1,1,1,1,ILAG),VYLAG(1,1,1,1,ILAG-1),NTOT1)
          IF (NDIM.EQ.3)
      $   call copy_acc(VZLAG(1,1,1,1,ILAG),VZLAG(1,1,1,1,ILAG-1),NTOT1)
  100  CONTINUE
-C
+
       call opcopy_acc (VXLAG,VYLAG,VZLAG,VX,VY,VZ)
-C
+
       return
       END
-C
 
       subroutine hypmsk3 (hv1msk,hv2msk,hv3msk)
 C---------------------------------------------------------------------

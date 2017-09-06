@@ -68,27 +68,21 @@ c               write (6,*) 'pr=',pr(i,1,1,1)
 c            enddo
 c            stop
 c         endif
-         
+
          if (istep.eq.1) then
             call makef_acc
          else
             call makef
-!$acc    update device(bfx,bfy,bfz)
-         endif
-
-         if (istep.eq.2) then
-!$acc       update host(bfx,bfy,bfz)
-            do i=1,lx1*ly1*lz1
-c              write (6,*) 'bfx=',bfx(i,1,1,1)
-c              write (6,*) 'bfy=',bfy(i,1,1,1)
-c              write (6,*) 'bfz=',bfz(i,1,1,1)
-            enddo
-c           stop
+!$acc       update device(bfx,bfy,bfz)
          endif
 
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
          call sumab_acc(vy_e,vy,vylag,n,ab,nab)
          call sumab_acc(vz_e,vz,vzlag,n,ab,nab)
+
+!$acc    update host(vx_e,vy_e,vz_e)
+         call outpost(vx_e,vy_e,vz_e,pr,t,'g_e')
+c        stop
 
       else
          ! add user defined divergence to qtl 
@@ -101,6 +95,10 @@ c           stop
          call bcdirvc  (vx,vy,vz,v1mask,v2mask,v3mask) 
 !$acc    update device(vx,vy,vz)
 
+         call outpost(vx,vy,vz,pr,t,'g_v')
+         call outpost(v1mask,v2mask,v3mask,pr,t,'gma')
+c        stop
+
 c        first, compute pressure
 
          if (icalld.eq.0) tpres=0.0
@@ -112,9 +110,12 @@ c        first, compute pressure
 !$acc       enter data copyin(h1,h2,respr,pmask,res1,res2,res3)
 !$acc       enter data copyin(dv1,dv2,dv3)
          endif
-            
 
          call crespsp_acc(respr)
+
+!$acc    update host(respr)
+         call outpost(respr,respr,respr,respr,respr,'wrp')
+c        stop
 
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
@@ -129,10 +130,16 @@ c        first, compute pressure
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
 
+!$acc    update host(pr)
+         call outpost(pr,vx,vy,vz,t,'wpr')
+c        stop
 
          tpres=tpres+(dnekclock()-etime1)
 
          call cresvsp_acc(res1,res2,res3,h1,h2)
+!$acc    update host(res1,res2,res3)
+         call outpost(res1,res2,res3,pr,t,'wcv')
+c        stop
 
          ! ophinv_pr starts here
          call dssum(res1,nx1,ny1,nz1)
@@ -164,13 +171,9 @@ c        first, compute pressure
      $                 binvm1)
          ! ophinv_pr ends here
 
-c!$acc    update host(dv1,dv2,dv3)
-c         do i=1,lx1*ly1*lz1*nelv
-c            write (6,*) 'dv1=',dv1(i,1,1,1)
-c            write (6,*) 'dv2=',dv2(i,1,1,1)
-c            write (6,*) 'dv3=',dv3(i,1,1,1)
-c         enddo
-c         stop
+!$acc    update host(dv1,dv2,dv3)
+         call outpost(dv1,dv2,dv3,pr,t,'wdv')
+c        stop
 
 c below gives correct values in iterations
 c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310  
@@ -179,25 +182,10 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
 
-!$acc    update host(pr,vx,vy,vz)
-
-         if (istep.eq.2) then
-            do i=1,lx1*ly1*lz1*nelv
-               write (6,*) 'pr=',pr(i,1,1,1)
-            enddo
-            stop
-
-            do i=1,lx1*ly1*lz1
-               write (6,*) 'vx=',vx(i,1,1,1)
-               write (6,*) 'vy=',vy(i,1,1,1)
-               write (6,*) 'vz=',vz(i,1,1,1)
-            enddo
-            stop
-         endif
-
-c        call outpost(vx,vy,vz,pr,t,'gp4')
+!$acc update host(vx,vy,vz,pr)
+         call outpost(vx,vy,vz,pr,t,'wp4')
 c        stop
-
+         call plan4_acc_update_host
 
 c!$acc exit data
 
@@ -213,8 +201,6 @@ c!$acc exit data
          ENDIF
  
       endif
-
-      if (igeom.eq.2) call plan4_acc_update_host
  
       return
       end
@@ -914,8 +900,6 @@ c
 
       nfaces = 2*ndim
 
-!$ACC UPDATE HOST(respr,ta1,ta2,ta3)
-
       do e=1,nelv
       do f=1,nfaces
 
@@ -949,8 +933,6 @@ c
          call sub2 (respr(1,e),w1,lz)
       enddo
       enddo
-
-!$ACC UPDATE DEVICE(respr)
 
       return
       end
@@ -989,8 +971,11 @@ c     -mu*curl(curl(v))
 
       call op_curl(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
       call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+
 !$acc update device(wa1,wa2,wa3)
-c     call outpost(wa1,wa2,wa3,pr,t,'gcp')
+      call outpost(wa1,wa2,wa3,pr,t,'gop')
+c     stop
+
       do i=1,ntot1
 c        write (6,*) 'wa1=',wa1(i)
 c        write (6,*) 'wa2=',wa2(i)
@@ -1000,36 +985,24 @@ c     stop
 
       call opcolv_acc(wa1,wa2,wa3,bm1)
       call wgradm1_acc(ta1,ta2,ta3,qtl,nelv)
-!$acc update host(ta1,ta2,ta3)
 
-      do i=1,ntot1
-c        write (6,*) 'ta1=',ta1(i)
-c        write (6,*) 'ta2=',ta2(i)
-c        write (6,*) 'ta3=',ta3(i)
-      enddo
-c     stop
-
-      do i=1,16
-c        write (6,*) 'ta1=',ta1(i,1,1,1)
-c        write (6,*) 'ta2=',ta2(i,1,1,1)
-c        write (6,*) 'ta3=',ta3(i,1,1,1)
-      enddo      
+!$acc update host(wa1,wa2,wa3)
+      call outpost(wa1,wa2,wa3,pr,t,'goc')
 
       scale = -4./3. 
       call opadd2cm_acc(wa1,wa2,wa3,ta1,ta2,ta3,scale)
-
-!$acc update host(wa1,wa2,wa3)
-      do i=1,16
-c        write (6,*) 'wa1=',wa1(i)
-c        write (6,*) 'wa2=',wa2(i)
-c        write (6,*) 'wa3=',wa3(i)
-      enddo      
 
 c compute stress tensor for ifstrs formulation - variable viscosity Pn-Pn
       if (ifstrs) 
      $   call exitti('ifstrs not yet support on gpu$',nelv)
 
       call invcol3_acc(w1,vdiff,vtrans,ntot1)
+!$acc update host(w1)
+      do i=1,ntot1
+c        write (6,*) 'w1=',w1(i,1)
+      enddo
+c     stop
+
       call opcolv_acc   (wa1,wa2,wa3,w1)
 
 !$acc update host(wa1,wa2,wa3,w1)
@@ -1046,23 +1019,29 @@ c     add old pressure term because we solve for delta p
       call rzero_acc   (ta2,ntot1)
 
 !$acc update host(ta1)
-
       do i=1,lx1*ly1*lz1
 c        write (6,*) 'ta1=',ta1(i,1,1,1)
       enddo      
+c     stop
 
 !$acc update host  (pr)
       call bcdirsc (pr)
 !$acc update device(pr)
 
+!$acc update host(pr,ta1,ta2,respr)
       do i=1,lx1*ly1*lz1
 c        write (6,*) 'pr=',pr(i,1,1,1)
       enddo
 
-      call axhelm_acc  (respr,pr,ta1,ta2,1,1)
+      call outpost(pr,ta1,ta2,respr,t,'gpa')
+c     stop
+
+      call axhelm_acc_debug(respr,pr,ta1,ta2,1,1)
+
+      call outpost(respr,pr,ta1,ta2,t,'goa')
+c     stop
 
       call chsign_acc  (respr,ntot1)
-
 
 c     call outpost  (respr,bfx,bfy,bfz,vtrans,'gc5')
 
@@ -1082,23 +1061,9 @@ c     add explicit (NONLINEAR) terms
       enddo
 !$acc end parallel
 
-c!$acc update host(ta1)
-
-      do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'ta1=',ta1(i,1,1,1)
-      enddo
-c     stop
-
       call dssum (ta1,nx1,ny1,nz1)
       call dssum (ta2,nx1,ny1,nz1)
       call dssum (ta3,nx1,ny1,nz1)
-
-c!$acc update host(ta1)
-
-      do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'ta1=',ta1(i,1,1,1)
-      enddo
-c     stop
 
 c     call outpost(ta1,ta2,ta3,vtrans,t,'gc_')
 c     call outpost(bm1,binvm1,wa1,wa2,wa3,'gc_')
@@ -1111,89 +1076,85 @@ c     call outpost(bm1,binvm1,wa1,wa2,wa3,'gc_')
       enddo
 !$acc end parallel
 
-c     write (6,*) 'test'
-
 !$acc update host(ta1,ta2,ta3)
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'ta1=',ta1(i,1,1,1)
-c        write (6,*) 'ta2=',ta2(i,1,1,1)
-c        write (6,*) 'ta3=',ta3(i,1,1,1)
-      enddo
-
-!$acc update host(ta1,ta2,ta3,respr,t)
-c     call outpost  (ta1,ta2,ta3,respr,t,'gc_')
+      call outpost(ta1,ta2,ta3,pr,t,'wcp')
+c     stop
 
       dtbd = bd(1)/dt  !! FOR NOW, no QTL support (pff, 7/31/17)
 c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
 
-cc******************************************
-ccccc!$acc parallel loop gang
-ccccc!$acc& private(w1,w2,w3)
-cc!$acc parallel loop
-cc!$acc& present(ta1,ta2,ta3,w3m1,rxm1,rym1,rzm1)
-cc!$acc& present(sxm1,sym1,szm1,txm1,tym1,tzm1)
-cc!$acc& present(dxtm1,bm1,qtl,respr)
-c
-c      do e=1,nelv
-cc!$acc  loop vector
-c       do i=1,lx1*ly1*lz1
-c         w1(i,1,1) = (rxm1(i,1,1,e)*ta1(i,1,1,e) ! Jacobian
-c     $               +rym1(i,1,1,e)*ta2(i,1,1,e) ! included
-c     $               +rzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
-c         w2(i,1,1) = (sxm1(i,1,1,e)*ta1(i,1,1,e)
-c     $               +sym1(i,1,1,e)*ta2(i,1,1,e)
-c     $               +szm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
-c         w3(i,1,1) = (txm1(i,1,1,e)*ta1(i,1,1,e)
-c     $               +tym1(i,1,1,e)*ta2(i,1,1,e)
-c     $               +tzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
-c       enddo
-c
-cc!$acc  loop vector collapse(3)
-c       do k=1,nz1
-c       do j=1,ny1
-c       do i=1,nx1
-c          t1 = 0.0
-cc!$acc     loop seq
-c          do l=1,nx1
-c             t1 = t1 + dxm1(l,i)*w1(l,j,k) ! D^T
-c     $               + dxm1(l,j)*w2(i,l,k)
-c     $               + dxm1(l,k)*w3(i,j,l)
-c          enddo
-c          respr(i,j,k,e) = respr(i,j,k,e) + t1
-cc    $                   + dtbd*bm1(i,j,k,e)*qtl(i,j,k,e)
-c       enddo
-c       enddo
-c       enddo
-c
-c      enddo
-cc!$acc end parallel
-cc******************************************
+c******************************************
+!$acc update host(ta1,ta2,ta3)
 
-      if (if3d) then
-         call cdtp    (wa1,ta1,rxm1,sxm1,txm1,1)
-         call cdtp    (wa2,ta2,rym1,sym1,tym1,1)
-         call cdtp    (wa3,ta3,rzm1,szm1,tzm1,1)
-         do i=1,n
-            respr(i,1,1,1) = respr(i,1,1,1)+wa1(i)+wa2(i)+wa3(i)
-         enddo
-      else
-         call cdtp    (wa1,ta1,rxm1,sxm1,txm1,1)
-         call cdtp    (wa2,ta2,rym1,sym1,tym1,1)
-         do i=1,n
-            respr(i,1,1,1) = respr(i,1,1,1)+wa1(i)+wa2(i)
-         enddo
-      endif
-!$acc update device(respr,ta1,ta2,ta3,w1,w2,w3)
+cccc!$acc parallel loop gang
+cccc!$acc& private(w1,w2,w3)
+c!$acc parallel loop
+c!$acc& present(ta1,ta2,ta3,w3m1,rxm1,rym1,rzm1)
+c!$acc& present(sxm1,sym1,szm1,txm1,tym1,tzm1)
+c!$acc& present(dxtm1,bm1,qtl,respr)
 
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'respr=',respr(i,1,1,1)
+      do e=1,nelv
+c!$acc  loop vector
+       do i=1,lx1*ly1*lz1
+         w1(i,1,1) = (rxm1(i,1,1,e)*ta1(i,1,1,e) ! Jacobian
+     $               +rym1(i,1,1,e)*ta2(i,1,1,e) ! included
+     $               +rzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
+         w2(i,1,1) = (sxm1(i,1,1,e)*ta1(i,1,1,e)
+     $               +sym1(i,1,1,e)*ta2(i,1,1,e)
+     $               +szm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
+         w3(i,1,1) = (txm1(i,1,1,e)*ta1(i,1,1,e)
+     $               +tym1(i,1,1,e)*ta2(i,1,1,e)
+     $               +tzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
+       enddo
+
+c!$acc  loop vector collapse(3)
+       do k=1,nz1
+       do j=1,ny1
+       do i=1,nx1
+          t1 = 0.0
+c!$acc     loop seq
+          do l=1,nx1
+             t1 = t1 + dxm1(l,i)*w1(l,j,k) ! D^T
+     $               + dxm1(l,j)*w2(i,l,k)
+     $               + dxm1(l,k)*w3(i,j,l)
+          enddo
+          respr(i,j,k,e) = respr(i,j,k,e) + t1
+     $                   + dtbd*bm1(i,j,k,e)*qtl(i,j,k,e)
+       enddo
+       enddo
+       enddo
+
       enddo
+c!$acc end parallel
+c******************************************
+
+      call outpost(respr,wa1,wa2,wa3,t,'wc2')
+c     stop
+
+c!$acc update host(wa1,wa2,wa3,ta1,ta2,ta3,respr)
+c      if (if3d) then
+c         call cdtp    (wa1,ta1,rxm1,sxm1,txm1,1)
+c         call cdtp    (wa2,ta2,rym1,sym1,tym1,1)
+c         call cdtp    (wa3,ta3,rzm1,szm1,tzm1,1)
+c         do i=1,n
+c            respr(i,1,1,1) = respr(i,1,1,1)+wa1(i)+wa2(i)+wa3(i)
+c         enddo
+c      else
+c         call cdtp    (wa1,ta1,rxm1,sxm1,txm1,1)
+c         call cdtp    (wa2,ta2,rym1,sym1,tym1,1)
+c         do i=1,n
+c            respr(i,1,1,1) = respr(i,1,1,1)+wa1(i)+wa2(i)
+c         enddo
+c      endif
+c!$acc update device(respr)
+
+      dtbd = bd(1)/dt  !! FOR NOW, no QTL support (pff, 7/31/17)
+c     call admcol3_acc(respr,qtl,bm1,dtbd,ntot1)
 
       call crespsp_face_update(respr,ta1,ta2,ta3,dtbd,w1,w2,w3)
-
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'respr=',respr(i,1,1,1)
-      enddo
+      call outpost(respr,wa1,wa2,wa3,t,'wc3')
+c     stop
+!$acc update device(respr)
 
 C     Orthogonalize to (1,1,...,1)T for all-Dirichlet case
 

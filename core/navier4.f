@@ -284,12 +284,12 @@ C--------------------------------------------------------------------
 C
       COMMON /SCRUZ/  DIVV (LX2,LY2,LZ2,LELV)
      $ ,              BDIVV(LX2,LY2,LZ2,LELV)
-C
+
       if (ifsplit) return
       IF (param(102).eq.0.and.(TOLPDF.NE.0. .OR. ISTEP.LE.5)) RETURN
       five = 5.0
       if (param(102).ne.0.0) five=param(102)
-C
+
       NTOT2 = NX2*NY2*NZ2*NELV
       if (ifield.eq.1) then     ! avo: sub arguments?
          CALL OPDIV (BDIVV,VX,VY,VZ)
@@ -298,9 +298,9 @@ C
       endif
       CALL COL3 (DIVV,BDIVV,BM2INV,NTOT2)
       DNORM = SQRT(GLSC2(DIVV,BDIVV,NTOT2)/VOLVM2) 
-C
+
       if (nio.eq.0) WRITE (6,*) istep,' DNORM, DIVEX',DNORM,DIVEX
-C
+
 c     IF (istep.gt.10.and.DNORM.GT.(1.01*DIVEX).AND.DIVEX.GT.0.) then
 c        if (DNORM.gt.1e-8) then
 c           if (nid.eq.0) WRITE(6,*) 'DNORM-DIVEX div. ... aborting'
@@ -315,20 +315,20 @@ c     IF (DNORM.GT.(1.2*DIVEX).AND.DIVEX.GT.0.) TOLPDF = 5.*DNORM
       IF (istep.gt.5.and.tolpdf.eq.0.0.and.
      $    DNORM.GT.(1.2*DIVEX).AND.DIVEX.GT.0.) 
      $     TOLPDF = FIVE*DNORM
-C
+
       RETURN
       END
       FUNCTION VLSC3(X,Y,B,N)
-C
+
 C     local inner product, with weight
-C
+
       DIMENSION X(1),Y(1),B(1)
       REAL DT
-C
+
       include 'OPCTR'
-C
+
 #ifdef TIMER
-C
+
       if (isclld.eq.0) then
           isclld=1
           nrout=nrout+1
@@ -340,7 +340,7 @@ C
       ncall(myrout) = ncall(myrout) + 1
       dcount      =      dcount + dfloat(isbcnt)
 #endif
-C
+
       DT = 0.0
       DO 10 I=1,N
          T = X(I)*Y(I)*B(I)

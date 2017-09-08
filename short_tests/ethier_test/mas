@@ -1,0 +1,11 @@
+#!/bin/bash
+
+make -f mas.makefile 2>&1 | tee compiler.mas.output
+success=`grep -i 'compilation successful' compiler.mas.output`
+
+if [ -n "$success" ]; then
+    sleep 1
+    ./mas.nek5000 |& tee mas.log
+else
+    echo 'compilation failed'
+fi

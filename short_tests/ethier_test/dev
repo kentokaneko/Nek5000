@@ -1,0 +1,11 @@
+#!/bin/bash
+
+make -f dev.makefile 2>&1 | tee compiler.dev.output
+success=`grep -i 'compilation successful' compiler.dev.output`
+
+if [ -n "$success" ]; then
+    sleep 1
+    ./dev.nek5000 |& tee dev.log
+else
+    echo 'compilation failed'
+fi

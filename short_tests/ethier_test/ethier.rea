@@ -22,8 +22,8 @@
   0.500000E-01 p018 GRID < 0 --> # cells on screen
   -1.00000     p019 INTYPE
    4.00000     p020 NORDER
-  0.100000E-08 p021 DIVERGENCE
-  0.100000E-10 p022 HELMHOLTZ
+  0.100000E-10 p021 DIVERGENCE
+  0.100000E-12 p022 HELMHOLTZ
    0.00000     p023 NPSCAL
   0.100000E-01 p024 TOLREL
   0.100000E-01 p025 TOLABS
@@ -96,7 +96,7 @@
    0.00000     p092
    20.0000     p093 Number of previous pressure solns saved
    0.00000     p094 start projecting velocity after p94 step
-   5.00000     p095 start projecting pressure after p95 step
+   0.00000     p095 start projecting pressure after p95 step
    0.00000     p096
    0.00000     p097
    0.00000     p098

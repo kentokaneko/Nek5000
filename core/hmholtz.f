@@ -251,13 +251,13 @@ c    &      write(6,3002) istep,'  Hmholtz ' // name,
 c    &                    iter,rbn2,h1(1),tol,h2(1),ifmcor
 
 c        Always take at least one iteration   (for projection) pff 11/23/98
-         IF (rbn2.LE.TOL.and.(iter.gt.1 .or. istep.le.5)) THEN
-            NITER = ITER-1
+         if (rbn2.le.tol.and.(iter.gt.1 .or. istep.le.5)) then
+            niter = iter-1
 c           if (nio.eq.0)
 c    &         write(6,3000) istep,'  Hmholtz ' // name,
 c    &                       niter,rbn2,rbn0,tol
             goto 9999
-         ENDIF
+         endif
  
          beta = rtz1/rtz2
 

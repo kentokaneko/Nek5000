@@ -555,22 +555,36 @@ c
       call chck('dbb')
 
 !$acc update host(bfx,bfy,bfz)
+      do k=1,lz1
+      do j=1,ly1
+      do i=1,lx1
+         write (6,*) 'mabf bfx=',bfx(i,j,k,1),i,j,k
+         write (6,*) 'mabf bfy=',bfy(i,j,k,1)
+         write (6,*) 'mabf bfz=',bfz(i,j,k,1)
+      enddo
+      enddo
+      enddo
+c     stop
+
+!$acc update host(bfx,bfy,bfz)
       call outpost(bfx,bfy,bfz,pr,t,'waa')
 
       call makebdf_acc
+
+!$acc update host(bfx,bfy,bfz)
+      do k=1,lz1
+      do j=1,ly1
+      do i=1,lx1
+         write (6,*) 'mbdf bfx=',bfx(i,j,k,1),i,j,k
+         write (6,*) 'mbdf bfy=',bfy(i,j,k,1)
+         write (6,*) 'mbdf bfz=',bfz(i,j,k,1)
+      enddo
+      enddo
+      enddo
+c     stop
+
       call chck('ebb')
 
-!$acc    update host(bfx,bfy,bfz)
-         do k=1,lz1
-         do j=1,ly1
-         do i=1,lx1
-            write (6,*) 'mfbf bfx=',bfx(i,j,k,1),i,j,k
-            write (6,*) 'mfbf bfy=',bfy(i,j,k,1)
-            write (6,*) 'mfbf bfz=',bfz(i,j,k,1)
-         enddo
-         enddo
-         enddo
-c        stop
 
 !$acc update host(bfx,bfy,bfz)
       call outpost(bfx,bfy,bfz,pr,t,'wbb')

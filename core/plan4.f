@@ -196,7 +196,7 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vz,dv3,n)
 
          write (6,*) 'syncing point'
-         write (6,*) 'sol dev'
+         write (6,*) 'sol dev',istep
 
 !$acc update host(vx,vy,vz,pr)
 

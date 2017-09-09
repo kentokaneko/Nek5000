@@ -816,6 +816,14 @@ c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
       enddo
 !$acc end parallel
 
+!$acc update host(tb1,tb2,tb3)
+      write (6,*) 'tbtb dev',istep
+      do i=1,lx1*ly1*lz1
+         write (6,*) 'tbtb tb1=', tb1(i)
+         write (6,*) 'tbtb tb2=', tb2(i)
+         write (6,*) 'tbtb tb3=', tb3(i)
+      enddo
+
 !$acc update host(tb1,tb2,tb3,h2)
       call outpost(tb1,tb2,tb3,h2,t,'wtb')
 
@@ -858,19 +866,31 @@ c    $                                BM1                   ,bd(ilag+1))
             do j = 1, ly1
             do i = 1, lx1
                ta1(i,j,k,e) = vxlag(i,j,k,e,ilag-1)  * 
-     $                        bm1(i,j,k,ilag-1+e) *
+c    $                        bm1(i,j,k,ilag-1+e) *
+     $                        bm1(i,j,k,e) *
      $                        bd(ilag+1)
                ta2(i,j,k,e) = vylag(i,j,k,e,ilag-1)  * 
-     $                        bm1(i,j,k,ilag-1+e) *
+c    $                        bm1(i,j,k,ilag-1+e) *
+     $                        bm1(i,j,k,e) *
      $                        bd(ilag+1)
                ta3(i,j,k,e) = vzlag(i,j,k,e,ilag-1)  * 
-     $                        bm1(i,j,k,ilag-1+e) *
+c    $                        bm1(i,j,k,ilag-1+e) *
+     $                        bm1(i,j,k,e) *
      $                        bd(ilag+1)
             enddo
             enddo
             enddo
             enddo
 !$acc end parallel
+!$acc update host(vxlag,vylag,vzlag)
+            write (6,*) 'vlag dev',istep
+            do i=1,lx1*ly1*lz1
+               write (6,*) 'vlag vxlag=',vxlag(i,1,1,1,ilag-1),ilag
+               write (6,*) 'vlag vylag=',vylag(i,1,1,1,ilag-1),ilag
+               write (6,*) 'vlag vzlag=',vzlag(i,1,1,1,ilag-1),ilag
+               write (6,*) 'vlag bm1=',bm1(i,1,1,1)
+               write (6,*) 'vlag bd=',bd(ilag+1)
+            enddo
          endif
 c        INLINED:
 c        call opadd2_acc(TB1,TB2,TB3,TA1,TA2,TA3)
@@ -885,12 +905,21 @@ c          IF(NDIM.EQ.3)CALL ADD2(TB3,TA3,NTOT1)
          do i = 1, lx1
             tb1(i,j,k,e) = tb1(i,j,k,e) + ta1(i,j,k,e)
             tb2(i,j,k,e) = tb2(i,j,k,e) + ta2(i,j,k,e)
-            tb3(i,j,k,e) = tb3(i,j,k,e) + ta1(i,j,k,e)
+c           tb3(i,j,k,e) = tb3(i,j,k,e) + ta1(i,j,k,e)
+            tb3(i,j,k,e) = tb3(i,j,k,e) + ta3(i,j,k,e)
          enddo
          enddo
          enddo
          enddo
 !$acc end parallel
+      enddo
+
+!$acc update host(tb1,tb2,tb3)
+      write (6,*) 'tbtb2 dev',istep
+      do i=1,lx1*ly1*lz1
+         write (6,*) 'tbtb2 tb1=', tb1(i)
+         write (6,*) 'tbtb2 tb2=', tb2(i)
+         write (6,*) 'tbtb2 tb3=', tb3(i)
       enddo
 
 c     INLINED:

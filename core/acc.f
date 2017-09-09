@@ -558,7 +558,7 @@ c
       do k=1,lz1
       do j=1,ly1
       do i=1,lx1
-         write (6,*) 'mabf bfx=',bfx(i,j,k,1),i,j,k
+         write (6,*) 'mabf bfx=',bfx(i,j,k,1),istep,i,j,k
          write (6,*) 'mabf bfy=',bfy(i,j,k,1)
          write (6,*) 'mabf bfz=',bfz(i,j,k,1)
       enddo
@@ -575,7 +575,7 @@ c     stop
       do k=1,lz1
       do j=1,ly1
       do i=1,lx1
-         write (6,*) 'mbdf bfx=',bfx(i,j,k,1),i,j,k
+         write (6,*) 'mbdf bfx=',bfx(i,j,k,1),istep,i,j,k
          write (6,*) 'mbdf bfy=',bfy(i,j,k,1)
          write (6,*) 'mbdf bfz=',bfz(i,j,k,1)
       enddo

@@ -120,12 +120,12 @@ c-----------------------------------------------------------------------
       call cadd(pre,pbarm,n2)     !  Make sure pr and pre have same
       call cadd(pre,pbar,n2)      !  average pressure before comparing.
 
-      if (istep.le.5) then        !  Reset velocity & pressure to eliminate
-         call copy (vx,uxe,n)     !  start-up contributions 
-         call copy (vy,uye,n)     
-         call copy (vz,uze,n)
-         call copy (pr,pre,n2)
-      endif
+c     if (istep.le.5) then        !  Reset velocity & pressure to eliminate
+c        call copy (vx,uxe,n)     !  start-up contributions
+c        call copy (vy,uye,n)
+c        call copy (vz,uze,n)
+c        call copy (pr,pre,n2)
+c     endif
 
       call sub3(uxerr,vx,uxe,n)
       call sub3(uyerr,vy,uye,n)

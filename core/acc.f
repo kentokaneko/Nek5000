@@ -1377,7 +1377,7 @@ c-----------------------------------------------------------------------
          write (6,*) 'vd vyd=',vyd(i,1,1,1)
          write (6,*) 'vd vzd=',vzd(i,1,1,1)
       enddo
-      stop
+c     stop
 
          do i=1,lxd*lyd*lzd*nelv
             cvx(i,1,1,1,1) = vxd(i,1,1,1)

@@ -549,32 +549,31 @@ c
       call chck('abb')
       call makeuf_acc    ! paul and som
       call chck('bbb')
-      if (istep.eq.1) then
-         call advab_acc
-      else
-!$acc    update host(bfx,bfy,bfz)
-         call advab
-!$acc    update device(bfx,bfy,bfz)
-      endif
+      if (ifnav .and..not.ifchar) call advab_acc
       call chck('cbb')
       call makeabf_acc
-      if (istep.eq.2) then 
-         call rzero_acc(bfx,lx1*ly1*lz1*nelv)
-         call rzero_acc(bfy,lx1*ly1*lz1*nelv)
-         call rzero_acc(bfz,lx1*ly1*lz1*nelv)
-      endif
       call chck('dbb')
+
+!$acc update host(bfx,bfy,bfz)
+      call outpost(bfx,bfy,bfz,pr,t,'waa')
+
       call makebdf_acc
       call chck('ebb')
-      if (istep.eq.2) then
+
 !$acc    update host(bfx,bfy,bfz)
-         do i=1,lx1*ly1*lz1
-            write (6,*) 'bfx=',bfx(i,1,1,1)
-            write (6,*) 'bfy=',bfy(i,1,1,1)
-            write (6,*) 'bfz=',bfz(i,1,1,1)
+         do k=1,lz1
+         do j=1,ly1
+         do i=1,lx1
+            write (6,*) 'mfbf bfx=',bfx(i,j,k,1),i,j,k
+            write (6,*) 'mfbf bfy=',bfy(i,j,k,1)
+            write (6,*) 'mfbf bfz=',bfz(i,j,k,1)
          enddo
-         stop
-      endif
+         enddo
+         enddo
+c        stop
+
+!$acc update host(bfx,bfy,bfz)
+      call outpost(bfx,bfy,bfz,pr,t,'wbb')
 
       return
       end
@@ -660,6 +659,8 @@ C---------------------------------------------------------------
       call chck('c11')
       call convop_acc(ta3,vz)
 
+      call outpost(ta1,ta2,ta3,pr,t,'wta')
+
 !$acc parallel loop
       do i=1,n
 c        bfx(i,1,1,1)=bfx(i,1,1,1)-ta1(i)*bm1(i,1,1,1)
@@ -671,15 +672,6 @@ c        bfz(i,1,1,1)=bfz(i,1,1,1)-ta3(i)*bm1(i,1,1,1)
       enddo
 !$acc end loop
 !$acc end data 
-
-!$acc update host(bfx,bfy,bfz)
-c     do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'bfx=',bfx(i,1,1,1)
-c        write (6,*) 'bfy=',bfy(i,1,1,1)
-c        write (6,*) 'bfz=',bfz(i,1,1,1)
-c     enddo
-c     call outpost(bfx,bfy,bfz,pr,t,'gbf')
-c     stop
 
       return
       end
@@ -790,6 +782,12 @@ c     call cmult2_acc(h2,vtrans(1,1,1,1,ifield),const,ntot1)
 
 c     INLINED:
 c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
+
+!$acc update host(vx,vy,vz,bm1)
+      call outpost(vx,vy,vz,bm1,t,'wso')
+
+!$acc update host(bd)
+      write (6,*) 'bd2=',bd(2)
 !$acc parallel loop
       do e = 1, nelv
       do k = 1, lz1
@@ -803,6 +801,9 @@ c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
       enddo
       enddo
 !$acc end parallel
+
+!$acc update host(tb1,tb2,tb3,h2)
+      call outpost(tb1,tb2,tb3,h2,t,'wtb')
 
       do ilag=2,nbd
 
@@ -1327,15 +1328,20 @@ c-----------------------------------------------------------------------
 
       call chck('q41')
 
-c      if (istep.eq.2) then
-c!$acc    update host(vxd,vyd,vzd)
-c         do i=1,lxd*lyd*lzd
-c            write (6,*) 'vxd=',vxd(i,1,1,1)
-c            write (6,*) 'vyd=',vyd(i,1,1,1)
-c            write (6,*) 'vzd=',vzd(i,1,1,1)
-c         enddo
-c         stop
-c      endif
+!$acc update host(vxd,vyd,vzd)
+      do i=1,lxd*lyd*lzd
+         write (6,*) 'vd vxd=',vxd(i,1,1,1)
+         write (6,*) 'vd vyd=',vyd(i,1,1,1)
+         write (6,*) 'vd vzd=',vzd(i,1,1,1)
+      enddo
+      stop
+
+         do i=1,lxd*lyd*lzd*nelv
+            cvx(i,1,1,1,1) = vxd(i,1,1,1)
+            cvx(i,1,1,1,2) = vyd(i,1,1,1)
+            cvx(i,1,1,1,3) = vzd(i,1,1,1)
+         enddo
+         call convop_fst_3d(du,u,cvx,lx1,lxd,nelv)
 
       if (istep.eq.1) then
          do i=1,lx1*lxd

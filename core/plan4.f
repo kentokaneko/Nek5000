@@ -69,19 +69,32 @@ c            enddo
 c            stop
 c         endif
 
-         if (istep.eq.1) then
+c        if (istep.eq.1) then
             call makef_acc
-         else
-            call makef
-!$acc       update device(bfx,bfy,bfz)
-         endif
+c        else
+c           call makef
+c!$acc       update device(bfx,bfy,bfz)
+c        endif
+
+!$acc    update host(bfx,bfy,bfz)
+         do k=1,lz1
+         do j=1,ly1
+         do i=1,lx1
+            write (6,*) 'p4bf bfx=',bfx(i,j,k,1),i,j,k
+            write (6,*) 'p4bf bfy=',bfy(i,j,k,1)
+            write (6,*) 'p4bf bfz=',bfz(i,j,k,1)
+         enddo
+         enddo
+         enddo
+c        stop
 
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
          call sumab_acc(vy_e,vy,vylag,n,ab,nab)
          call sumab_acc(vz_e,vz,vzlag,n,ab,nab)
 
-!$acc    update host(vx_e,vy_e,vz_e)
-         call outpost(vx_e,vy_e,vz_e,pr,t,'g_e')
+!$acc    update host(vx_e,vy_e,vz_e,bfx,bfy,bfz)
+         call outpost(bfx,bfy,bfz,pr,t,'wbf')
+         call outpost(vx_e,vy_e,vz_e,pr,t,'w_e')
 c        stop
 
       else
@@ -95,8 +108,8 @@ c        stop
          call bcdirvc  (vx,vy,vz,v1mask,v2mask,v3mask) 
 !$acc    update device(vx,vy,vz)
 
-         call outpost(vx,vy,vz,pr,t,'g_v')
-         call outpost(v1mask,v2mask,v3mask,pr,t,'gma')
+         call outpost(vx,vy,vz,pr,t,'w_v')
+         call outpost(v1mask,v2mask,v3mask,pr,t,'wma')
 c        stop
 
 c        first, compute pressure
@@ -182,9 +195,31 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
 
+         write (6,*) 'syncing point'
+         write (6,*) 'sol dev'
+
 !$acc update host(vx,vy,vz,pr)
+
+         do k=1,lz1
+         do j=1,ly1
+         do i=1,lx1
+            write (6,*) 'sol pr=',pr(i,1,1,1),i,j,k
+         enddo
+         enddo
+         enddo
+
+         do k=1,lz1
+         do j=1,ly1
+         do i=1,lx1
+            write (6,*) 'sol vx=',vx(i,j,k,1),i,j,k
+            write (6,*) 'sol vy=',vy(i,j,k,1)
+            write (6,*) 'sol vz=',vz(i,j,k,1)
+         enddo
+         enddo
+         enddo
+
          call outpost(vx,vy,vz,pr,t,'wp4')
-c        stop
+
          call plan4_acc_update_host
 
 c!$acc exit data
@@ -973,7 +1008,7 @@ c     -mu*curl(curl(v))
       call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
 
 !$acc update device(wa1,wa2,wa3)
-      call outpost(wa1,wa2,wa3,pr,t,'gop')
+      call outpost(wa1,wa2,wa3,pr,t,'wop')
 c     stop
 
       do i=1,ntot1
@@ -987,7 +1022,7 @@ c     stop
       call wgradm1_acc(ta1,ta2,ta3,qtl,nelv)
 
 !$acc update host(wa1,wa2,wa3)
-      call outpost(wa1,wa2,wa3,pr,t,'goc')
+      call outpost(wa1,wa2,wa3,pr,t,'woc')
 
       scale = -4./3. 
       call opadd2cm_acc(wa1,wa2,wa3,ta1,ta2,ta3,scale)
@@ -1005,13 +1040,8 @@ c     stop
 
       call opcolv_acc   (wa1,wa2,wa3,w1)
 
-!$acc update host(wa1,wa2,wa3,w1)
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'w1=',w1(i,1,1)
-c        write (6,*) 'wa1=',wa1(i)
-c        write (6,*) 'wa2=',wa2(i)
-c        write (6,*) 'wa3=',wa3(i)
-      enddo      
+!$acc update host(wa1,wa2,wa3)
+      call outpost(wa1,wa2,wa3,vtrans,t,'woo')
 
 c     add old pressure term because we solve for delta p 
 
@@ -1029,26 +1059,16 @@ c     stop
 !$acc update device(pr)
 
 !$acc update host(pr,ta1,ta2,respr)
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'pr=',pr(i,1,1,1)
-      enddo
 
-      call outpost(pr,ta1,ta2,respr,t,'gpa')
-c     stop
+      call outpost(pr,ta1,ta2,respr,t,'wpa')
 
       call axhelm_acc_debug(respr,pr,ta1,ta2,1,1)
 
-      call outpost(respr,pr,ta1,ta2,t,'goa')
-c     stop
+      call outpost(respr,pr,ta1,ta2,t,'woa')
 
       call chsign_acc  (respr,ntot1)
 
-c     call outpost  (respr,bfx,bfy,bfz,vtrans,'gc5')
-
-c     write (6,*) 'after chsign_acc'
-
-c     call outpost  (ta1,wa2,ta3,pr,respr,'   ')
-c     call exitti('quit after axhelm$',nelv)
+      call outpost(bfx,bfy,bfz,pr,t,'wb2')
 
 c     add explicit (NONLINEAR) terms 
 
@@ -1060,6 +1080,9 @@ c     add explicit (NONLINEAR) terms
          ta3(i,1,1,1) = bfz(i,1,1,1)/vtrans(i,1,1,1,1)-wa3(i)
       enddo
 !$acc end parallel
+
+!$acc update host(ta1,ta2,ta3)
+      call outpost(ta1,ta2,ta3,pr,t,'wc0')
 
       call dssum (ta1,nx1,ny1,nz1)
       call dssum (ta2,nx1,ny1,nz1)

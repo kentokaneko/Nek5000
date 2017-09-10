@@ -787,17 +787,6 @@ c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
       enddo
 !$acc end parallel
 
-c!$acc update host(tb1,tb2,tb3)
-c      write (6,*) 'tbtb dev',istep
-c      do i=1,lx1*ly1*lz1
-c         write (6,*) 'tbtb tb1=', tb1(i)
-c         write (6,*) 'tbtb tb2=', tb2(i)
-c         write (6,*) 'tbtb tb3=', tb3(i)
-c      enddo
-
-c!$acc update host(tb1,tb2,tb3,h2)
-c      call outpost(tb1,tb2,tb3,h2,t,'wtb')
-
       do ilag=2,nbd
 
          if (ifgeom) then
@@ -884,14 +873,6 @@ c           tb3(i,j,k,e) = tb3(i,j,k,e) + ta1(i,j,k,e)
          enddo
 !$acc end parallel
       enddo
-
-c!$acc update host(tb1,tb2,tb3)
-c      write (6,*) 'tbtb2 dev',istep
-c      do i=1,lx1*ly1*lz1
-c         write (6,*) 'tbtb2 tb1=', tb1(i)
-c         write (6,*) 'tbtb2 tb2=', tb2(i)
-c         write (6,*) 'tbtb2 tb3=', tb3(i)
-c      enddo
 
 c     INLINED:
 c     call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)

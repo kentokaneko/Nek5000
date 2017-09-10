@@ -3482,11 +3482,6 @@ c
          call global_grad3(dxm1,u,dudr,duds,dudt)
          write (6,*) 'after global_grad3'
 
-!$acc    update host(dudr,duds,dudt)
-         call outpost(dudr,duds,dudt,g1m1,g2m1,'wax')
-         call outpost(g3m1,g4m1,g5m1,g6m1,t,'wa2')
-c        stop
-
 !FIXME: Create a new subroutine for this kernel
 !$ACC PARALLEL LOOP GANG VECTOR
          do i=1,ntot
@@ -3525,18 +3520,6 @@ c$$$  CALL COL2    (TMP3,HELM1,NTOT)
 !FIXME: Div should also include summation
          call global_div3(dxtm1,tmp1,tmp2,tmp3,tm1,tm2,tm3)
 
-!$acc update host(tmp1,tmp2,tmp3,tm1,tm2,tm3)
-      write (6,*) 'tm1(1,1)=',tm1(1,1)
-      do i=1,lx1
-         write (6,*) 'd(1,i)=',dxtm1(1,i)
-      enddo
-      do i=1,lx1
-         write (6,*) 'tmp1(i,1)=',tmp1(i)
-      enddo
-c     stop
-      call outpost(tmp1,tmp2,tmp3,pr,t,'wa3')
-c     stop
-
 !$acc parallel loop gang vector
          do i=1,ntot
             au(i) = tm1(i)+tm2(i)+tm3(i)
@@ -3549,9 +3532,7 @@ c$$$  call add2 (au,tm2,ntot)
 c$$$  call add2 (au,tm3,ntot)
       endif
 
-!$acc update host(au)
-      call outpost(au,tm1,tm2,tm3,t,'wa4')
-c     stop
+!$acc update host(au) ! <- this is needed
 
 !call addcol4 (au,helm2,bm1,u,ntot)
 

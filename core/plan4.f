@@ -107,10 +107,6 @@ c        first, compute pressure
 
          call crespsp_acc(respr)
 
-c!$acc    update host(respr)
-c         call outpost(respr,respr,respr,respr,respr,'wrp')
-c        stop
-
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
          call ctolspl_acc(tolspl,respr)
@@ -124,16 +120,9 @@ c        stop
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
 
-c!$acc    update host(pr)
-c         call outpost(pr,vx,vy,vz,t,'wpr')
-c        stop
-
          tpres=tpres+(dnekclock()-etime1)
 
          call cresvsp_acc(res1,res2,res3,h1,h2)
-c!$acc    update host(res1,res2,res3)
-c         call outpost(res1,res2,res3,pr,t,'wcv')
-c        stop
 
          ! ophinv_pr starts here
          call dssum(res1,nx1,ny1,nz1)
@@ -148,15 +137,6 @@ c        stop
          call chktcg1_acc(tol2,res1,h1,h2,v2mask,vmult,imesh,2)
          call chktcg1_acc(tol3,res1,h1,h2,v3mask,vmult,imesh,3)
 
-         write (6,*) 'maxit=',nmxh
-         write (6,*) '   '
-         write (6,*) '   '
-         write (6,*) '   '
-         write (6,*) '   '
-         write (6,*) '   '
-         write (6,*) '   '
-         write (6,*) '   '
-
          call cggo_acc(dv1,res1,h1,h2,v1mask,vmult,imesh,tol1,nmxh,1,
      $                 binvm1)
          call cggo_acc(dv2,res2,h1,h2,v2mask,vmult,imesh,tol2,nmxh,2,
@@ -164,10 +144,6 @@ c        stop
          call cggo_acc(dv3,res3,h1,h2,v3mask,vmult,imesh,tol3,nmxh,3,
      $                 binvm1)
          ! ophinv_pr ends here
-
-c!$acc    update host(dv1,dv2,dv3)
-c         call outpost(dv1,dv2,dv3,pr,t,'wdv')
-c        stop
 
 c below gives correct values in iterations
 c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310  
@@ -189,6 +165,7 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          enddo
          enddo
 
+         if (mod(istep,iostep).eq.0) then
          do k=1,lz1
          do j=1,ly1
          do i=1,lx1
@@ -198,12 +175,10 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          enddo
          enddo
          enddo
-
          call outpost(vx,vy,vz,pr,t,'wp4')
+         endif
 
          call plan4_acc_update_host
-
-c!$acc exit data
 
          IF (NIO.EQ.0) THEN
             WRITE(6,'(13X,A,1p2e13.4)')
@@ -969,9 +944,9 @@ c
      $ ,             wa2   (lx1*ly1*lz1*lelv)
      $ ,             wa3   (lx1*ly1*lz1*lelv)
      $ ,             wa4   (lx1*ly1*lz1*lelv*ldimt1)
-      real           w1    (lx1,ly1,lz1*lelv)
-     $ ,             w2    (lx1,ly1,lz1*lelv)
-     $ ,             w3    (lx1,ly1,lz1*lelv)
+      real           w1    (lx1,ly1,lz1,lelv)
+     $ ,             w2    (lx1,ly1,lz1,lelv)
+     $ ,             w3    (lx1,ly1,lz1,lelv)
 
       character cb*3,c1*1
       integer e,f
@@ -1054,14 +1029,12 @@ c     call outpost(bm1,binvm1,wa1,wa2,wa3,'gc_')
       enddo
 !$acc end parallel
 
-c!$acc update host(ta1,ta2,ta3)
-c      call outpost(ta1,ta2,ta3,pr,t,'wcp')
-c     stop
-
       dtbd = bd(1)/dt  !! FOR NOW, no QTL support (pff, 7/31/17)
 c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
 
+!$acc update host(ta1,ta2,ta3)
 c******************************************
+c TODO: still done on the cpu
 
 c!$acc parallel loop gang
 c!$acc& private(w1,w2,w3)
@@ -1070,20 +1043,16 @@ c!$acc& present(ta1,ta2,ta3,w3m1,rxm1,rym1,rzm1)
 c!$acc& present(sxm1,sym1,szm1,txm1,tym1,tzm1)
 c!$acc& present(dxtm1,bm1,qtl,respr)
 
-c!$acc kernels
-
-!$acc update host(ta1,ta2,ta3)
-
       do e=1,nelv
 c!$acc  loop vector
        do i=1,lx1*ly1*lz1
-         w1(i,1,1) = (rxm1(i,1,1,e)*ta1(i,1,1,e) ! Jacobian
+         w1(i,1,1,e) = (rxm1(i,1,1,e)*ta1(i,1,1,e) ! Jacobian
      $               +rym1(i,1,1,e)*ta2(i,1,1,e) ! included
      $               +rzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
-         w2(i,1,1) = (sxm1(i,1,1,e)*ta1(i,1,1,e)
+         w2(i,1,1,e) = (sxm1(i,1,1,e)*ta1(i,1,1,e)
      $               +sym1(i,1,1,e)*ta2(i,1,1,e)
      $               +szm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
-         w3(i,1,1) = (txm1(i,1,1,e)*ta1(i,1,1,e)
+         w3(i,1,1,e) = (txm1(i,1,1,e)*ta1(i,1,1,e)
      $               +tym1(i,1,1,e)*ta2(i,1,1,e)
      $               +tzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
        enddo
@@ -1095,9 +1064,9 @@ c!$acc  loop vector collapse(3)
           t1 = 0.0
 c!$acc     loop seq
           do l=1,nx1
-             t1 = t1 + dxm1(l,i)*w1(l,j,k) ! D^T
-     $               + dxm1(l,j)*w2(i,l,k)
-     $               + dxm1(l,k)*w3(i,j,l)
+             t1 = t1 + dxm1(l,i)*w1(l,j,k,e) ! D^T
+     $               + dxm1(l,j)*w2(i,l,k,e)
+     $               + dxm1(l,k)*w3(i,j,l,e)
           enddo
           respr(i,j,k,e) = respr(i,j,k,e) + t1
      $                   + dtbd*bm1(i,j,k,e)*qtl(i,j,k,e)
@@ -1106,12 +1075,10 @@ c!$acc     loop seq
        enddo
 
       enddo
-c!$acc end kernels
-c!$acc update host(respr,ta1,ta2,ta3)
 c!$acc end parallel
 c******************************************
 
-      call outpost(respr,wa1,wa2,wa3,t,'wc2')
+c     call outpost(respr,wa1,wa2,wa3,t,'wc2')
 c     stop
 
 c!$acc update host(wa1,wa2,wa3,ta1,ta2,ta3,respr)

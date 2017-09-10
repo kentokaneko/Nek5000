@@ -787,16 +787,16 @@ c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
       enddo
 !$acc end parallel
 
-!$acc update host(tb1,tb2,tb3)
-      write (6,*) 'tbtb dev',istep
-      do i=1,lx1*ly1*lz1
-         write (6,*) 'tbtb tb1=', tb1(i)
-         write (6,*) 'tbtb tb2=', tb2(i)
-         write (6,*) 'tbtb tb3=', tb3(i)
-      enddo
+c!$acc update host(tb1,tb2,tb3)
+c      write (6,*) 'tbtb dev',istep
+c      do i=1,lx1*ly1*lz1
+c         write (6,*) 'tbtb tb1=', tb1(i)
+c         write (6,*) 'tbtb tb2=', tb2(i)
+c         write (6,*) 'tbtb tb3=', tb3(i)
+c      enddo
 
-!$acc update host(tb1,tb2,tb3,h2)
-      call outpost(tb1,tb2,tb3,h2,t,'wtb')
+c!$acc update host(tb1,tb2,tb3,h2)
+c      call outpost(tb1,tb2,tb3,h2,t,'wtb')
 
       do ilag=2,nbd
 
@@ -853,15 +853,15 @@ c    $                        bm1(i,j,k,ilag-1+e) *
             enddo
             enddo
 !$acc end parallel
-!$acc update host(vxlag,vylag,vzlag)
-            write (6,*) 'vlag dev',istep
-            do i=1,lx1*ly1*lz1
-               write (6,*) 'vlag vxlag=',vxlag(i,1,1,1,ilag-1),ilag
-               write (6,*) 'vlag vylag=',vylag(i,1,1,1,ilag-1),ilag
-               write (6,*) 'vlag vzlag=',vzlag(i,1,1,1,ilag-1),ilag
-               write (6,*) 'vlag bm1=',bm1(i,1,1,1)
-               write (6,*) 'vlag bd=',bd(ilag+1)
-            enddo
+c!$acc update host(vxlag,vylag,vzlag)
+c            write (6,*) 'vlag dev',istep
+c            do i=1,lx1*ly1*lz1
+c               write (6,*) 'vlag vxlag=',vxlag(i,1,1,1,ilag-1),ilag
+c               write (6,*) 'vlag vylag=',vylag(i,1,1,1,ilag-1),ilag
+c               write (6,*) 'vlag vzlag=',vzlag(i,1,1,1,ilag-1),ilag
+c               write (6,*) 'vlag bm1=',bm1(i,1,1,1)
+c               write (6,*) 'vlag bd=',bd(ilag+1)
+c            enddo
          endif
 c        INLINED:
 c        call opadd2_acc(TB1,TB2,TB3,TA1,TA2,TA3)
@@ -885,13 +885,13 @@ c           tb3(i,j,k,e) = tb3(i,j,k,e) + ta1(i,j,k,e)
 !$acc end parallel
       enddo
 
-!$acc update host(tb1,tb2,tb3)
-      write (6,*) 'tbtb2 dev',istep
-      do i=1,lx1*ly1*lz1
-         write (6,*) 'tbtb2 tb1=', tb1(i)
-         write (6,*) 'tbtb2 tb2=', tb2(i)
-         write (6,*) 'tbtb2 tb3=', tb3(i)
-      enddo
+c!$acc update host(tb1,tb2,tb3)
+c      write (6,*) 'tbtb2 dev',istep
+c      do i=1,lx1*ly1*lz1
+c         write (6,*) 'tbtb2 tb1=', tb1(i)
+c         write (6,*) 'tbtb2 tb2=', tb2(i)
+c         write (6,*) 'tbtb2 tb3=', tb3(i)
+c      enddo
 
 c     INLINED:
 c     call opadd2col_acc(BFX,BFY,BFZ,TB1,TB2,TB3,h2)

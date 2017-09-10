@@ -58,44 +58,25 @@ c
             call hsmg_acc_update_device
          endif
 
-c         if (istep.eq.2) then
-c!$acc       update host(vx,vy,vz)
-c            do i=1,lx1*ly1*lz1
-c               write (6,*) 'vx=',vx(i,1,1,1)
-c               write (6,*) 'vy=',vy(i,1,1,1)
-c               write (6,*) 'vz=',vz(i,1,1,1)
-c               write (6,*) 'pr=',pr(i,1,1,1)
-c            enddo
-c            stop
-c         endif
+         call makef_acc
 
-c        if (istep.eq.1) then
-            call makef_acc
-c        else
-c           call makef
-c!$acc       update device(bfx,bfy,bfz)
-c        endif
-
-!$acc    update host(bfx,bfy,bfz)
-         do k=1,lz1
-         do j=1,ly1
-         do i=1,lx1
-            write (6,*) 'p4bf bfx=',bfx(i,j,k,1),i,j,k
-            write (6,*) 'p4bf bfy=',bfy(i,j,k,1)
-            write (6,*) 'p4bf bfz=',bfz(i,j,k,1)
-         enddo
-         enddo
-         enddo
-c        stop
+c!$acc    update host(bfx,bfy,bfz)
+c         do k=1,lz1
+c         do j=1,ly1
+c         do i=1,lx1
+c            write (6,*) 'p4bf bfx=',bfx(i,j,k,1),i,j,k
+c            write (6,*) 'p4bf bfy=',bfy(i,j,k,1)
+c            write (6,*) 'p4bf bfz=',bfz(i,j,k,1)
+c         enddo
+c         enddo
+c         enddo
+cc        stop
 
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
          call sumab_acc(vy_e,vy,vylag,n,ab,nab)
          call sumab_acc(vz_e,vz,vzlag,n,ab,nab)
 
-!$acc    update host(vx_e,vy_e,vz_e,bfx,bfy,bfz)
-         call outpost(bfx,bfy,bfz,pr,t,'wbf')
-         call outpost(vx_e,vy_e,vz_e,pr,t,'w_e')
-c        stop
+!$acc    update host(vx_e,vy_e,vz_e)
 
       else
          ! add user defined divergence to qtl 
@@ -108,8 +89,8 @@ c        stop
          call bcdirvc  (vx,vy,vz,v1mask,v2mask,v3mask) 
 !$acc    update device(vx,vy,vz)
 
-         call outpost(vx,vy,vz,pr,t,'w_v')
-         call outpost(v1mask,v2mask,v3mask,pr,t,'wma')
+c        call outpost(vx,vy,vz,pr,t,'w_v')
+c        call outpost(v1mask,v2mask,v3mask,pr,t,'wma')
 c        stop
 
 c        first, compute pressure
@@ -126,8 +107,8 @@ c        first, compute pressure
 
          call crespsp_acc(respr)
 
-!$acc    update host(respr)
-         call outpost(respr,respr,respr,respr,respr,'wrp')
+c!$acc    update host(respr)
+c         call outpost(respr,respr,respr,respr,respr,'wrp')
 c        stop
 
          call invers2_acc (h1,vtrans,n)
@@ -143,15 +124,15 @@ c        stop
          call add2_acc (pr,respr,n)
          call ortho_acc(pr)
 
-!$acc    update host(pr)
-         call outpost(pr,vx,vy,vz,t,'wpr')
+c!$acc    update host(pr)
+c         call outpost(pr,vx,vy,vz,t,'wpr')
 c        stop
 
          tpres=tpres+(dnekclock()-etime1)
 
          call cresvsp_acc(res1,res2,res3,h1,h2)
-!$acc    update host(res1,res2,res3)
-         call outpost(res1,res2,res3,pr,t,'wcv')
+c!$acc    update host(res1,res2,res3)
+c         call outpost(res1,res2,res3,pr,t,'wcv')
 c        stop
 
          ! ophinv_pr starts here
@@ -184,8 +165,8 @@ c        stop
      $                 binvm1)
          ! ophinv_pr ends here
 
-!$acc    update host(dv1,dv2,dv3)
-         call outpost(dv1,dv2,dv3,pr,t,'wdv')
+c!$acc    update host(dv1,dv2,dv3)
+c         call outpost(dv1,dv2,dv3,pr,t,'wdv')
 c        stop
 
 c below gives correct values in iterations
@@ -1001,14 +982,17 @@ c
       ntot1  = nxyz1*nelv
       nfaces = 2*ndim
 
-!$ACC ENTER DATA CREATE(ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
+!$acc enter data create(ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
 c     -mu*curl(curl(v))
 
-      call op_curl(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
-      call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+c     call op_curl(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
+c     call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
 
-!$acc update device(wa1,wa2,wa3)
-      call outpost(wa1,wa2,wa3,pr,t,'wop')
+      call op_curl_acc(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
+      call op_curl_acc(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+
+c!$acc update device(wa1,wa2,wa3)
+c     call outpost(wa1,wa2,wa3,pr,t,'wop')
 c     stop
 
       do i=1,ntot1
@@ -1021,8 +1005,8 @@ c     stop
       call opcolv_acc(wa1,wa2,wa3,bm1)
       call wgradm1_acc(ta1,ta2,ta3,qtl,nelv)
 
-!$acc update host(wa1,wa2,wa3)
-      call outpost(wa1,wa2,wa3,pr,t,'woc')
+c!$acc update host(wa1,wa2,wa3)
+c      call outpost(wa1,wa2,wa3,pr,t,'woc')
 
       scale = -4./3. 
       call opadd2cm_acc(wa1,wa2,wa3,ta1,ta2,ta3,scale)

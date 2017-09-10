@@ -553,41 +553,9 @@ c
       call chck('cbb')
       call makeabf_acc
       call chck('dbb')
-
-!$acc update host(bfx,bfy,bfz)
-      do k=1,lz1
-      do j=1,ly1
-      do i=1,lx1
-         write (6,*) 'mabf bfx=',bfx(i,j,k,1),istep,i,j,k
-         write (6,*) 'mabf bfy=',bfy(i,j,k,1)
-         write (6,*) 'mabf bfz=',bfz(i,j,k,1)
-      enddo
-      enddo
-      enddo
-c     stop
-
-!$acc update host(bfx,bfy,bfz)
-      call outpost(bfx,bfy,bfz,pr,t,'waa')
-
       call makebdf_acc
 
-!$acc update host(bfx,bfy,bfz)
-      do k=1,lz1
-      do j=1,ly1
-      do i=1,lx1
-         write (6,*) 'mbdf bfx=',bfx(i,j,k,1),istep,i,j,k
-         write (6,*) 'mbdf bfy=',bfy(i,j,k,1)
-         write (6,*) 'mbdf bfz=',bfz(i,j,k,1)
-      enddo
-      enddo
-      enddo
-c     stop
-
       call chck('ebb')
-
-
-!$acc update host(bfx,bfy,bfz)
-      call outpost(bfx,bfy,bfz,pr,t,'wbb')
 
       return
       end
@@ -632,7 +600,10 @@ c-----------------------------------------------------------------------
 c------------------------------------------------------------------------
       subroutine opcolv_acc (a1,a2,a3,c)
       include 'SIZE'
-      real a1(1),a2(1),a3(1),c(1)
+      real a1(nx1*ny1*nz1*nelv),
+     $     a2(nx1*ny1*nz1*nelv),
+     $     a3(nx1*ny1*nz1*nelv),
+     $      c(nx1*ny1*nz1*nelv)
 
       ntot1=nx1*ny1*nz1*nelv
 
@@ -665,7 +636,7 @@ C---------------------------------------------------------------
 
       n = lx1*ly1*lz1*nelv
 
-!$acc update host(vxd,vyd,vzd)
+c!$acc update host(vxd,vyd,vzd)
       call chck('a11')
       call convop_acc(ta1,vx)
       call chck('b11')
@@ -1263,39 +1234,11 @@ c
       call global_curl_grad3_acc(u1r,u1s,u1t,
      $   u2r,u2s,u2t,u3r,u3s,u3t,u1,u2,u3,dxm1)
 
-!$acc update host(rxm1,sxm1,txm1)
-!$acc update host(rym1,sym1,tym1)
-!$acc update host(rzm1,szm1,tzm1)
-
-!$acc update host(u3r)
-      do i=1,16
-         write (6,*) 'u3r=',u3r(i,1,1,1)
-      enddo
-
-c     call exitti('exit before outpost$',1)
-
-c     call outpost(rxm1,sxm1,txm1,pr,t,'goc')
-c     call outpost(rym1,sym1,tym1,pr,t,'goc')
-c     call outpost(rzm1,szm1,tzm1,pr,t,'goc')
-
       call curl_acc (u1r,u1s,u1t,u2r,u2s,u2t,u3r,u3s,u3t,
      $               rxm1,sxm1,txm1,rym1,sym1,tym1,rzm1,szm1,tzm1,
      $               w1,w2,w3,jacmi)
 
-!$acc update host(w1,w2,w3,u3r)
-
-      do i=1,16
-         write (6,*) 'u3r=',u3r(i,1,1,1)
-      enddo      
-      call exitti('end after u3r$',1)
-      
-c     call outpost(w1,w2,w3,pr,t,'goc')
-
-      do i=1,16
-         write (6,*) 'w1=',w1(i)
-         write (6,*) 'w2=',w2(i)
-         write (6,*) 'w3=',w3(i)
-      enddo      
+!$acc update host(w1,w2,w3)
 
       ifielt = ifield
       ifield = 1
@@ -1371,42 +1314,7 @@ c-----------------------------------------------------------------------
 
       call chck('q41')
 
-!$acc update host(vxd,vyd,vzd)
-      do i=1,lxd*lyd*lzd
-         write (6,*) 'vd vxd=',vxd(i,1,1,1)
-         write (6,*) 'vd vyd=',vyd(i,1,1,1)
-         write (6,*) 'vd vzd=',vzd(i,1,1,1)
-      enddo
-c     stop
-
-         do i=1,lxd*lyd*lzd*nelv
-            cvx(i,1,1,1,1) = vxd(i,1,1,1)
-            cvx(i,1,1,1,2) = vyd(i,1,1,1)
-            cvx(i,1,1,1,3) = vzd(i,1,1,1)
-         enddo
-         call convop_fst_3d(du,u,cvx,lx1,lxd,nelv)
-
-      if (istep.eq.1) then
-         do i=1,lx1*lxd
-            write (6,*) '1 test jggl=',jggl(i,1)
-            write (6,*) '1 test dggl=',dggl(i,1)
-         enddo
-         call convop_fst_3d_acc(du,u,vxd,vyd,vzd,bm1,jggl,dggl)
-      else
-!$acc    update host(u,vxd,vyd,vzd)
-         do i=1,lxd*lyd*lzd*nelv
-            cvx(i,1,1,1,1) = vxd(i,1,1,1)
-            cvx(i,1,1,1,2) = vyd(i,1,1,1)
-            cvx(i,1,1,1,3) = vzd(i,1,1,1)
-         enddo
-         call convop_fst_3d(du,u,cvx,lx1,lxd,nelv)
-
-         do i=1,lx1*ly1*lz1
-c           write (6,*) 'du=',du(i,1,1,1)
-         enddo
-c        stop
-!$acc    update device(du)         
-      endif
+      call convop_fst_3d_acc(du,u,vxd,vyd,vzd,bm1,jggl,dggl)
 
       call chck('q51')
 

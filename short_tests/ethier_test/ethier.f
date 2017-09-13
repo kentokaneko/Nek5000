@@ -158,11 +158,20 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      do iel=1,nelt
-      do ifc=1,2*ndim
-         idss = bc(5,ifc,iel,1)
-         if (idss.eq.1) cbc(ifc,iel,1)='v  '
-      enddo
+      integer e,f
+
+c     do iel=1,nelt
+c     do ifc=1,2*ndim
+c        idss = bc(5,ifc,iel,1)
+c        if (idss.eq.1) cbc(ifc,iel,1)='v  '
+c     enddo
+c     enddo
+
+      ! assuming the original domain is [0,1]x[0,1]x[0,1]
+      do i=1,lx1*ly1*lz1*nelv
+         xm1(i,1,1,1) = xm1(i,1,1,1) * 8.
+         ym1(i,1,1,1) = ym1(i,1,1,1) * 8.
+         zm1(i,1,1,1) = zm1(i,1,1,1) * 8.
       enddo
 
       return

@@ -60,17 +60,17 @@ c
 
          call makef_acc
 
-c!$acc    update host(bfx,bfy,bfz)
-c         do k=1,lz1
-c         do j=1,ly1
-c         do i=1,lx1
-c            write (6,*) 'p4bf bfx=',bfx(i,j,k,1),i,j,k
-c            write (6,*) 'p4bf bfy=',bfy(i,j,k,1)
-c            write (6,*) 'p4bf bfz=',bfz(i,j,k,1)
-c         enddo
-c         enddo
-c         enddo
-cc        stop
+!$acc    update host(bfx,bfy,bfz)
+         do k=1,lz1
+         do j=1,ly1
+         do i=1,lx1
+            write (6,*) 'p4bf bfx=',bfx(i,j,k,1),i,j,k
+            write (6,*) 'p4bf bfy=',bfy(i,j,k,1)
+            write (6,*) 'p4bf bfz=',bfz(i,j,k,1)
+         enddo
+         enddo
+         enddo
+c        stop
 
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
          call sumab_acc(vy_e,vy,vylag,n,ab,nab)
@@ -106,6 +106,12 @@ c        first, compute pressure
          endif
 
          call crespsp_acc(respr)
+
+c!$acc    update host(respr)
+c         do i=1,lx1*ly1*lz1*nelv
+c            write (6,*) 'respr=',respr(i,1,1,1)
+c         enddo
+c         stop
 
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
@@ -153,10 +159,12 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vz,dv3,n)
 
          write (6,*) 'syncing point'
-         write (6,*) 'sol dev',istep
 
 !$acc update host(vx,vy,vz,pr)
 
+         if (mod(istep,iostep).eq.0) then
+         write (6,*) 'sol dev',istep
+         do e=1,nelv
          do k=1,lz1
          do j=1,ly1
          do i=1,lx1
@@ -164,14 +172,15 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          enddo
          enddo
          enddo
-
-         if (mod(istep,iostep).eq.0) then
+         enddo
+         do e=1,nelv
          do k=1,lz1
          do j=1,ly1
          do i=1,lx1
-            write (6,*) 'sol vx=',vx(i,j,k,1),i,j,k
-            write (6,*) 'sol vy=',vy(i,j,k,1)
-            write (6,*) 'sol vz=',vz(i,j,k,1)
+            write (6,*) 'sol vx=',vx(i,j,k,e),i,j,k
+            write (6,*) 'sol vy=',vy(i,j,k,e)
+            write (6,*) 'sol vz=',vz(i,j,k,e)
+         enddo
          enddo
          enddo
          enddo
@@ -960,11 +969,24 @@ c
 !$acc enter data create(ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
 c     -mu*curl(curl(v))
 
-c     call op_curl(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
-c     call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+!$acc update host(ta1,ta2,ta3,vx_e,vy_e,vz_e)
+      call op_curl(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
+      call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+!$acc update device(wa1,wa2,wa3)
 
-      call op_curl_acc(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
-      call op_curl_acc(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+c     call op_curl_acc(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
+c     call op_curl_acc(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
+
+      write (6,*) 'synchronize'
+
+!$acc update host(wa1,wa2,wa3)
+      do i=1,lx1*ly1*lz1*nelv
+         write (6,*) 'waa1 sync',i
+         write (6,*) 'waa1',wa1(i)
+         write (6,*) 'waa1',wa2(i)
+         write (6,*) 'waa1',wa3(i)
+      enddo
+c     stop
 
       call opcolv_acc(wa1,wa2,wa3,bm1)
       call wgradm1_acc(ta1,ta2,ta3,qtl,nelv)
@@ -977,6 +999,12 @@ c compute stress tensor for ifstrs formulation - variable viscosity Pn-Pn
      $   call exitti('ifstrs not yet support on gpu$',nelv)
 
       call invcol3_acc(w1,vdiff,vtrans,ntot1)
+
+!$acc update host(w1)
+      do i=1,lx1*ly1*lz1*nelv
+         write (6,*) 'w1=',w1(i,1,1,1)
+      enddo
+
       call opcolv_acc   (wa1,wa2,wa3,w1)
 
 c     add old pressure term because we solve for delta p 
@@ -1008,10 +1036,18 @@ c     add explicit (NONLINEAR) terms
          ta1(i,1,1,1) = bfx(i,1,1,1)/vtrans(i,1,1,1,1)-wa1(i)
          ta2(i,1,1,1) = bfy(i,1,1,1)/vtrans(i,1,1,1,1)-wa2(i)
          ta3(i,1,1,1) = bfz(i,1,1,1)/vtrans(i,1,1,1,1)-wa3(i)
-      enddo
-!$acc end parallel
 
-c!$acc update host(ta1,ta2,ta3)
+      enddo
+!$acc end paranvllel
+
+
+
+!$acc update host(ta1,ta2,ta3)
+      do i=1,n
+         write (6,*) 'taa1',ta1(i,1,1,1)
+         write (6,*) 'taa2',ta2(i,1,1,1)
+         write (6,*) 'taa3',ta3(i,1,1,1)
+      enddo
 c      call outpost(ta1,ta2,ta3,pr,t,'wc0')
 
       call dssum (ta1,nx1,ny1,nz1)

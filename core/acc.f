@@ -644,7 +644,7 @@ c!$acc update host(vxd,vyd,vzd)
       call chck('c11')
       call convop_acc(ta3,vz)
 
-      call outpost(ta1,ta2,ta3,pr,t,'wta')
+c     call outpost(ta1,ta2,ta3,pr,t,'wta')
 
 !$acc parallel loop
       do i=1,n
@@ -769,7 +769,7 @@ c     INLINED:
 c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
 
 !$acc update host(vx,vy,vz,bm1)
-      call outpost(vx,vy,vz,bm1,t,'wso')
+c     call outpost(vx,vy,vz,bm1,t,'wso')
 
 !$acc update host(bd)
       write (6,*) 'bd2=',bd(2)
@@ -1109,15 +1109,15 @@ c-----------------------------------------------------------------------
       real tmpr3,tmps3,tmpt3
       integer i,j,k,l,e
 
-      tempo = 0.0
+c     tempo = 0.0
 
-      do i=1,lx1
-         write (6,*) 'u3=',u3(i,1,1,1)
-         write (6,*) 'd=',d(1,i)
-         tempo=tempo+u3(i,1,1,1)*d(1,i)
-      enddo
+c     do i=1,lx1
+c        write (6,*) 'u3=',u3(i,1,1,1)
+c        write (6,*) 'd=',d(1,i)
+c        tempo=tempo+u3(i,1,1,1)*d(1,i)
+c     enddo
 
-      write (6,*) 'u3r(1,1,1,1)=',tempo
+c     write (6,*) 'u3r(1,1,1,1)=',tempo
 
 c     call exitti('exit before mxm$',1)
 
@@ -1178,7 +1178,7 @@ c     call exitti('exit before mxm$',1)
 !$acc update host(u3r)
 !$ACC END DATA
 
-      write (6,*) 'u3r(1,1,1,1)=',u3r(1,1,1,1)
+c     write (6,*) 'u3r(1,1,1,1)=',u3r(1,1,1,1)
 c     call exitti('exit after mxm$',1)
 
       return
@@ -1224,9 +1224,22 @@ c
       ifielt = ifield
       ifield = 1
       call opcolv_acc (w1,w2,w3,bm1)
+!$acc update host(w1,w2,w3)
+      do i=1,lx1*ly1*lz1*nelv
+         write (6,*) 'dst1 ',w1(i)
+         write (6,*) 'dst1 ',w2(i)
+         write (6,*) 'dst1 ',w3(i)
+      enddo
       call dssum      (w1,nx1,ny1,nz1)
       call dssum      (w2,nx1,ny1,nz1)
       call dssum      (w3,nx1,ny1,nz1)
+!$acc update host(w1,w2,w3)
+      do i=1,lx1*ly1*lz1*nelv
+         write (6,*) 'dst2 ',w1(i)
+         write (6,*) 'dst2 ',w2(i)
+         write (6,*) 'dst2 ',w3(i)
+      enddo
+c     stop
       call opcolv_acc (w1,w2,w3,binvm1)
       ifield = ifielt
 

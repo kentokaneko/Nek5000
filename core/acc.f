@@ -1220,27 +1220,37 @@ c
      $               w1,w2,w3,jacmi)
 
 !$acc update host(w1,w2,w3)
-
       ifielt = ifield
       ifield = 1
       call opcolv_acc (w1,w2,w3,bm1)
-!$acc update host(w1,w2,w3)
-      do i=1,lx1*ly1*lz1*nelv
-         write (6,*) 'dst1 ',w1(i)
-         write (6,*) 'dst1 ',w2(i)
-         write (6,*) 'dst1 ',w3(i)
-      enddo
+c!$acc update host(w1,w2,w3)
+c      do i=1,lx1*ly1*lz1*nelv
+c         write (6,*) 'dst1 ',w1(i)
+c         write (6,*) 'dst1 ',w2(i)
+c         write (6,*) 'dst1 ',w3(i)
+c      enddo
       call dssum      (w1,nx1,ny1,nz1)
       call dssum      (w2,nx1,ny1,nz1)
       call dssum      (w3,nx1,ny1,nz1)
-!$acc update host(w1,w2,w3)
-      do i=1,lx1*ly1*lz1*nelv
-         write (6,*) 'dst2 ',w1(i)
-         write (6,*) 'dst2 ',w2(i)
-         write (6,*) 'dst2 ',w3(i)
-      enddo
+c!$acc update host(w1,w2,w3)
+c      do i=1,lx1*ly1*lz1*nelv
+c         write (6,*) 'dst2 ',w1(i)
+c         write (6,*) 'dst2 ',w2(i)
+c         write (6,*) 'dst2 ',w3(i)
+c      enddo
 c     stop
+c!$acc update host(binvm1)
+c      do i=1,lx1*ly1*lz1*nelv
+c         write (6,*) 'binvm',binvm1(i,1,1,1)
+c      enddo
+c      stop
       call opcolv_acc (w1,w2,w3,binvm1)
+!$acc update host(w1,w2,w3) !<- necessary
+c      do i=1,lx1*ly1*lz1*nelv
+c         write (6,*) 'opcolv',w1(i)
+c         write (6,*) 'opcolv',w1(i)
+c         write (6,*) 'opcolv',w1(i)
+c      enddo
       ifield = ifielt
 
 !$ACC END DATA

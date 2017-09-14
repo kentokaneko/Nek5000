@@ -420,9 +420,10 @@ c        construct or acc routine"
 
 !$ACC END DATA
 
-!$ACC UPDATE HOST(gamma_gmres(1))
+c!$acc update host(gamma_gmres(1))
+!$acc update host(gamma_gmres)
       temp = gamma_gmres(1)
-      write (6,*) 'temp=',temp
+c     write (6,*) 'temp=',temp
 
 #else
          gamma_gmres(1) = sqrt(glsc3(r_gmres,r_gmres,wt,n)) ! gamma  = \/ (r,r)

@@ -137,7 +137,8 @@ c     endif
       prerrl2 = glsc3(prerr,bm2,prerr,n2)
       prerrl2 = sqrt(prerrl2)
 
-      if (nid.eq.nio) write(6,*) time, uxerrl2, prerrl2,' L2 err'
+      if (mod(istep,iostep).eq.0) write(6,*) 'L2 err',istep,uxerrl2,
+     $ prerrl2
 
       return
       end

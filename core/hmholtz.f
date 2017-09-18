@@ -3134,7 +3134,7 @@ c        stop
          rinit  = sqrt(glsc3_acc (w2,w1,mult,ntot1)/voltm1)
       endif
 
-      write (6,*) 'rinit=',rinit
+c     write (6,*) 'rinit=',rinit
 c     stop
 
       rmin   = eps*rinit
@@ -3144,8 +3144,8 @@ c     stop
          tol = rmin
       endif
 
-      write (6,*) 'eps=',eps
-      write (6,*) 'tol=',tol
+c     write (6,*) 'epsi',eps
+c     write (6,*) 'tol=',tol
 c     stop
 c
       call rone_acc (w1,ntot1)
@@ -3153,14 +3153,14 @@ c
       bcneu2 = glsc3_acc(w1,w1  ,mult,ntot1)
       bctest = abs(bcneu1-bcneu2)
 
-      write (6,*) 'bctest=',bctest
+c     write (6,*) 'bctest=',bctest
 c
       call axhelm_acc (w2,w1,h1,h2,imesh,isd)
       call col2_acc   (w2,w2,ntot1)
       call col2_acc   (w2,bm1,ntot1)
       bcrob  = sqrt(glsum_acc(w2,ntot1)/vol)
 
-      write (6,*) 'bcrob=',bcrob
+c     write (6,*) 'bcrob=',bcrob
 c
       if ((bctest .lt. .1).and.(bcrob.lt.(eps*acondno))) then
 c         otr = glsc3 (w1,res,mult,ntot1)
@@ -3172,7 +3172,7 @@ c         otr = glsc3 (w1,res,mult,ntot1)
          endif
       endif
 
-      write (6,*) 'tol=',tol
+c     write (6,*) 'tol=',tol
 c     stop
 
 !$acc end data
@@ -3392,12 +3392,12 @@ c
 c        write (6,*) 'helm2=',helm2(i)
       enddo
 c     stop
-      write (6,*) 'before setfast'
+c     write (6,*) 'before setfast'
 
 !$acc update host(helm1,helm2)
       if (.not.ifsolv) call setfast(helm1,helm2,imesh)
 !$acc update device(helm1,helm2)
-      write (6,*) 'after setfast'
+c     write (6,*) 'after setfast'
       if (ifh2) then
 c        write (6,*) 'ifh2 = .true.'
       else
@@ -3478,9 +3478,9 @@ c$$$  c
 c$$$  else
 c
 c
-         write (6,*) 'before global_grad3'
+c        write (6,*) 'before global_grad3'
          call global_grad3(dxm1,u,dudr,duds,dudt)
-         write (6,*) 'after global_grad3'
+c        write (6,*) 'after global_grad3'
 
 !FIXME: Create a new subroutine for this kernel
 !$ACC PARALLEL LOOP GANG VECTOR

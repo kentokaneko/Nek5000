@@ -47,7 +47,7 @@ c
       ntot1  = nx1*ny1*nz1*nelv
       n      = ntot1
 
-      write (6,*) 'top of plan4_acc'
+c     write (6,*) 'top of plan4_acc'
 
       if (igeom.eq.1) then
          if (istep.eq.1) then
@@ -158,34 +158,34 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
 
-         write (6,*) 'syncing point'
+c        write (6,*) 'syncing point'
 
 !$acc update host(vx,vy,vz,pr)
 
-         if (mod(istep,iostep).eq.0) then
-         write (6,*) 'sol dev',istep
-         do e=1,nelv
-         do k=1,lz1
-         do j=1,ly1
-         do i=1,lx1
-            write (6,*) 'sol pr=',pr(i,1,1,1),i,j,k
-         enddo
-         enddo
-         enddo
-         enddo
-         do e=1,nelv
-         do k=1,lz1
-         do j=1,ly1
-         do i=1,lx1
-            write (6,*) 'sol vx=',vx(i,j,k,e),i,j,k
-            write (6,*) 'sol vy=',vy(i,j,k,e)
-            write (6,*) 'sol vz=',vz(i,j,k,e)
-         enddo
-         enddo
-         enddo
-         enddo
-         call outpost(vx,vy,vz,pr,t,'wp4')
-         endif
+c        if (mod(istep,iostep).eq.0) then
+c        write (6,*) 'sol dev',istep
+c        do e=1,nelv
+c        do k=1,lz1
+c        do j=1,ly1
+c        do i=1,lx1
+c           write (6,*) 'sol pr=',pr(i,1,1,1),i,j,k
+c        enddo
+c        enddo
+c        enddo
+c        enddo
+c        do e=1,nelv
+c        do k=1,lz1
+c        do j=1,ly1
+c        do i=1,lx1
+c           write (6,*) 'sol vx=',vx(i,j,k,e),i,j,k
+c           write (6,*) 'sol vy=',vy(i,j,k,e)
+c           write (6,*) 'sol vz=',vz(i,j,k,e)
+c        enddo
+c        enddo
+c        enddo
+c        enddo
+c        call outpost(vx,vy,vz,pr,t,'wp4')
+c        endif
 
          call plan4_acc_update_host
 
@@ -558,18 +558,18 @@ c     call outpost(ta4,vdiff,qtl,pr,t,'gv_')
 
       call outpost(resv1,resv2,resv3,ta4,h2,'gcv')
 c     call opgrad (ta1,ta2,ta3,ta4)
-      do i=1,ntot/nelv
-         write (6,*) 'ta4=',ta4(i,1,1,1)
-      enddo
+c     do i=1,ntot/nelv
+c        write (6,*) 'ta4=',ta4(i,1,1,1)
+c     enddo
       call wgradm1(ta1,ta2,ta3,ta4,nelv)
 c     call exitti('exit after wgradm1 in cresvsp$',1)
-      call outpost(ta1,ta2,ta3,ta4,h2,'gcv')
+c     call outpost(ta1,ta2,ta3,ta4,h2,'gcv')
 
-      do i=1,ntot/nelv
-         write (6,*) 'ta1=',ta1(i,1,1,1)
-         write (6,*) 'ta2=',ta2(i,1,1,1)
-         write (6,*) 'ta3=',ta3(i,1,1,1)
-      enddo
+c     do i=1,ntot/nelv
+c        write (6,*) 'ta1=',ta1(i,1,1,1)
+c        write (6,*) 'ta2=',ta2(i,1,1,1)
+c        write (6,*) 'ta3=',ta3(i,1,1,1)
+c     enddo
 
       if(IFAXIS) then
          CALL COL2 (TA2, OMASK,NTOT)
@@ -1241,8 +1241,8 @@ c     Single or double precision???
          rinit  = sqrt(glsc3_acc(w2,w1,mult,ntot1)/voltm1)
       endif
 
-      write (6,*) 'rinit=',rinit
-      stop
+c     write (6,*) 'rinit=',rinit
+c     stop
 
       rmin   = eps*rinit
 

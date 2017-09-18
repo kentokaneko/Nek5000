@@ -170,9 +170,9 @@ c     enddo
 
       ! assuming the original domain is [0,1]x[0,1]x[0,1]
       do i=1,lx1*ly1*lz1*nelv
-         xm1(i,1,1,1) = xm1(i,1,1,1) * 8.
-         ym1(i,1,1,1) = ym1(i,1,1,1) * 8.
-         zm1(i,1,1,1) = zm1(i,1,1,1) * 8.
+         xm1(i,1,1,1) = xm1(i,1,1,1) * 8. / 3.
+         ym1(i,1,1,1) = ym1(i,1,1,1) * 8. / 3.
+         zm1(i,1,1,1) = zm1(i,1,1,1) * 8. / 3.
       enddo
 
       return

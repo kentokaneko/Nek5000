@@ -772,7 +772,7 @@ c     CALL opcolv3c_acc (tb1,tb2,tb3,vx,vy,vz,bm1,bd(2))
 c     call outpost(vx,vy,vz,bm1,t,'wso')
 
 !$acc update host(bd)
-      write (6,*) 'bd2=',bd(2)
+c     write (6,*) 'bd2=',bd(2)
 !$acc parallel loop
       do e = 1, nelv
       do k = 1, lz1
@@ -944,7 +944,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       character*3 s3
 
-      write(6,*) 'checker: ',s3
+c     write(6,*) 'checker: ',s3
 
       return
       end

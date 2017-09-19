@@ -998,7 +998,7 @@ c     add explicit (NONLINEAR) terms
       dtbd = bd(1)/dt  !! FOR NOW, no QTL support (pff, 7/31/17)
 c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
 
-!$acc update host(ta1,ta2,ta3)
+!$acc update host(ta1,ta2,ta3,respr)
 c******************************************
 c TODO: still done on the cpu
 

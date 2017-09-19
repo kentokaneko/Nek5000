@@ -162,30 +162,30 @@ c        write (6,*) 'syncing point'
 
 !$acc update host(vx,vy,vz,pr)
 
-c        if (mod(istep,iostep).eq.0) then
-c        write (6,*) 'sol dev',istep
-c        do e=1,nelv
-c        do k=1,lz1
-c        do j=1,ly1
-c        do i=1,lx1
-c           write (6,*) 'sol pr=',pr(i,1,1,1),i,j,k
-c        enddo
-c        enddo
-c        enddo
-c        enddo
-c        do e=1,nelv
-c        do k=1,lz1
-c        do j=1,ly1
-c        do i=1,lx1
-c           write (6,*) 'sol vx=',vx(i,j,k,e),i,j,k
-c           write (6,*) 'sol vy=',vy(i,j,k,e)
-c           write (6,*) 'sol vz=',vz(i,j,k,e)
-c        enddo
-c        enddo
-c        enddo
-c        enddo
-c        call outpost(vx,vy,vz,pr,t,'wp4')
-c        endif
+         if (mod(istep,iostep).eq.0) then
+         write (6,*) 'sol dev',istep
+         do e=1,nelv
+         do k=1,lz1
+         do j=1,ly1
+         do i=1,lx1
+            write (6,*) 'sol pr=',pr(i,1,1,1),i,j,k
+         enddo
+         enddo
+         enddo
+         enddo
+         do e=1,nelv
+         do k=1,lz1
+         do j=1,ly1
+         do i=1,lx1
+            write (6,*) 'sol vx=',vx(i,j,k,e),i,j,k
+            write (6,*) 'sol vy=',vy(i,j,k,e)
+            write (6,*) 'sol vz=',vz(i,j,k,e)
+         enddo
+         enddo
+         enddo
+         enddo
+         call outpost(vx,vy,vz,pr,t,'wp4')
+         endif
 
          call plan4_acc_update_host
 

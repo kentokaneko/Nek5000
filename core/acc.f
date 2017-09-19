@@ -370,38 +370,7 @@ c-----------------------------------------------------------------------
 !$acc end parallel loop 
 
       call ophx_acc(resv1,resv2,resv3,vx,vy,vz,h1,h2)
-c!$acc update host(resv1,resv2,resv3)
-
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'resv1=',resv1(i)
-c        write (6,*) 'resv2=',resv2(i)
-c        write (6,*) 'resv3=',resv3(i)
-      enddo
-c     stop
-
-!$acc update host(ta4)
-      do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'ta4=',ta4(i)
-      enddo
-c     stop
-
       call wgradm1_acc(ta1,ta2,ta3,ta4,nelv)
-
-c!$acc update host(ta1,ta2,ta3)
-      do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'ta1=',ta1(i)
-c        write (6,*) 'ta2=',ta2(i)
-c        write (6,*) 'ta3=',ta3(i)
-      enddo
-c     stop
-
-c!$acc update host(resv1,resv2,resv3)
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'resv1=',resv1(i)
-c        write (6,*) 'resv2=',resv2(i)
-c        write (6,*) 'resv3=',resv3(i)
-      enddo
-c     stop
 
 !$acc parallel loop
       do i=1,n
@@ -410,14 +379,6 @@ c     stop
          resv3(i)=bfz(i,1,1,1)-resv3(i)-ta3(i)
       enddo
 !$acc end parallel loop 
-
-c!$acc update host(resv1,resv2,resv3)
-      do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'resv1=',resv1(i)
-c        write (6,*) 'resv2=',resv2(i)
-c        write (6,*) 'resv3=',resv3(i)
-      enddo
-c     stop
 
 !$acc end data
 

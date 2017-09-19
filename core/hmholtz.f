@@ -640,24 +640,11 @@ c
       naxhm=icalld
       etime1=dnekclock()
 
-      do i=1,lx1*ly1*lz1
-c        write (6,*) 'helm2=',helm2(i)
-      enddo
-c     stop
-
 !$acc update host(helm1,helm2)
       if (.not.ifsolv) call setfast(helm1,helm2,imesh)
-!$acc update device(helm1,helm2)
-      if (ifh2) then
-c        write (6,*) 'ifh2 = .true.'
-      else
-c        write (6,*) 'ifh2 = .false.'
-      endif
-c     stop
 
-c
       if (ifaxis) call setaxdy ( ifrzer(e) )
-c
+
 !$ACC DATA CREATE(dudr,duds,dudt,tmp1,tmp2,tmp3)
 !$ACC&           PRESENT(g1m1,g2m1,g3m1,g4m1,g5m1,g6m1)
 !$ACC&           PRESENT(dxm1,dxtm1,au,u,helm1,helm2)
@@ -772,27 +759,21 @@ c$$$  CALL COL2    (TMP3,HELM1,NTOT)
          enddo
 !$ACC END PARALLEL LOOP
 
-
-
 c$$$  CALL RZERO(AU,NTOT)
 c$$$  CALL ADD2 (AU,TM1,NTOT)
 c$$$  CALL ADD2 (AU,TM2,NTOT)
 c$$$  CALL ADD2 (AU,TM3,NTOT)
-c
-c
-      endif
 
-c
-c
+      endif
 
 !call addcol4 (au,helm2,bm1,u,ntot)
 
       if (ifh2) then
-!$acc parallel loop gang vector
+!$acc    parallel loop gang vector
          do i=1,ntot
             au(i) = au(i) + helm2(i)*bm1(i,1,1,1)*u(i)
          enddo
-!$acc end parallel
+!$acc    end parallel
       endif
 
 !$ACC END DATA

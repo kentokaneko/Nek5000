@@ -480,13 +480,6 @@ c     Later - we can make this fast
       call axhelm_acc(out3,inp3,h1,h2,imesh,3)
 !$acc end data
 
-c!$acc update host(out3)
-
-      do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'out3=',out3(i)
-      enddo
-c     stop
-
       return
       end
 c-----------------------------------------------------------------------

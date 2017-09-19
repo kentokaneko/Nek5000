@@ -1002,13 +1002,12 @@ c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
 c******************************************
 c TODO: still done on the cpu
 
-c!$acc parallel loop gang
-c!$acc& private(w1,w2,w3)
+!$acc parallel loop gang private(w1,w2,w3)
+
 c!$acc parallel loop
 c!$acc& present(ta1,ta2,ta3,w3m1,rxm1,rym1,rzm1)
 c!$acc& present(sxm1,sym1,szm1,txm1,tym1,tzm1)
 c!$acc& present(dxtm1,bm1,qtl,respr)
-
       do e=1,nelv
 c!$acc  loop vector
        do i=1,lx1*ly1*lz1
@@ -1041,8 +1040,9 @@ c!$acc     loop seq
        enddo
 
       enddo
-c!$acc end parallel
+!$acc end parallel
 c******************************************
+!$acc update host(respr,w1,w2,w3)
 
 c     call outpost(respr,wa1,wa2,wa3,t,'wc2')
 c     stop

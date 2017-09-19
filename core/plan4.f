@@ -944,32 +944,8 @@ c
 !$acc enter data create(ta1,ta2,ta3,wa1,wa2,wa3,wa4,w1,w2,w3)
 c     -mu*curl(curl(v))
 
-c!$acc update host(ta1,ta2,ta3,vx_e,vy_e,vz_e)
-
-c     write (6,*) 'synchronize'
-c     do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'v_e',vx_e(i)
-c        write (6,*) 'v_e',vy_e(i)
-c        write (6,*) 'v_e',vz_e(i)
-c     enddo
-c     stop
-c     call op_curl(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
-c     call op_curl(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
-c!$acc update device(wa1,wa2,wa3)
-
       call op_curl_acc(ta1,ta2,ta3,vx_e,vy_e,vz_e,.true.,w1,w2)
       call op_curl_acc(wa1,wa2,wa3,ta1,ta2,ta3,.true.,w1,w2)
-
-c     write (6,*) 'synchronize'
-
-c!$acc update host(ta1,ta2,ta3,wa1,wa2,wa3)
-
-c     do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'taa1 sync',i
-c        write (6,*) 'taa1',wa1(i)
-c        write (6,*) 'taa1',wa2(i)
-c        write (6,*) 'taa1',wa3(i)
-c     enddo
 
       call opcolv_acc(wa1,wa2,wa3,bm1)
       call wgradm1_acc(ta1,ta2,ta3,qtl,nelv)
@@ -977,26 +953,11 @@ c     enddo
       scale = -4./3. 
       call opadd2cm_acc(wa1,wa2,wa3,ta1,ta2,ta3,scale)
 
-c!$acc update host(wa1,wa2,wa3)
-c     do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'wa iii',i
-c        write (6,*) 'wa1=',wa1(i)
-c        write (6,*) 'wa2=',wa2(i)
-c        write (6,*) 'wa3=',wa3(i)
-c     enddo 
-
 c compute stress tensor for ifstrs formulation - variable viscosity Pn-Pn
       if (ifstrs) 
      $   call exitti('ifstrs not yet support on gpu$',nelv)
 
       call invcol3_acc(w1,vdiff,vtrans,ntot1)
-
-c!$acc update host(w1,wa1,wa2,wa3)
-c
-c      do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'w1=',w1(i,1,1,1)
-c      enddo
-
       call opcolv_acc   (wa1,wa2,wa3,w1)
 
 c     add old pressure term because we solve for delta p 
@@ -1008,17 +969,8 @@ c     add old pressure term because we solve for delta p
       call bcdirsc (pr)
 !$acc update device(pr)
 
-c!$acc update host(pr,ta1,ta2,respr)
-c
-c      call outpost(pr,ta1,ta2,respr,t,'wpa')
-
       call axhelm_acc_debug(respr,pr,ta1,ta2,1,1)
-
-c      call outpost(respr,pr,ta1,ta2,t,'woa')
-
       call chsign_acc  (respr,ntot1)
-
-c      call outpost(bfx,bfy,bfz,pr,t,'wb2')
 
 c     add explicit (NONLINEAR) terms 
 
@@ -1030,24 +982,10 @@ c     add explicit (NONLINEAR) terms
          ta3(i,1,1,1) = bfz(i,1,1,1)/vtrans(i,1,1,1,1)-wa3(i)
       enddo
 !$acc end parallel
-c!$acc end paranvllel
-
-
-
-c!$acc update host(ta1,ta2,ta3)
-c      do i=1,n
-c         write (6,*) 'taa1',ta1(i,1,1,1)
-c         write (6,*) 'taa2',ta2(i,1,1,1)
-c         write (6,*) 'taa3',ta3(i,1,1,1)
-c      enddo
-c      call outpost(ta1,ta2,ta3,pr,t,'wc0')
 
       call dssum (ta1,nx1,ny1,nz1)
       call dssum (ta2,nx1,ny1,nz1)
       call dssum (ta3,nx1,ny1,nz1)
-
-c     call outpost(ta1,ta2,ta3,vtrans,t,'gc_')
-c     call outpost(bm1,binvm1,wa1,wa2,wa3,'gc_')
 
 !$acc parallel loop present(ta1,ta2,ta3,binvm1)
       do i=1,n
@@ -1124,21 +1062,16 @@ c         do i=1,n
 c            respr(i,1,1,1) = respr(i,1,1,1)+wa1(i)+wa2(i)
 c         enddo
 c      endif
-c!$acc update device(respr)
 
       dtbd = bd(1)/dt  !! FOR NOW, no QTL support (pff, 7/31/17)
 c     call admcol3_acc(respr,qtl,bm1,dtbd,ntot1)
 
       call crespsp_face_update(respr,ta1,ta2,ta3,dtbd,w1,w2,w3)
-c     call outpost(respr,wa1,wa2,wa3,t,'wc3')
-c     stop
 !$acc update device(respr)
 
 C     Orthogonalize to (1,1,...,1)T for all-Dirichlet case
 
       call ortho_acc (respr)
-
-!$acc update host(respr)
 
 !$acc exit data
 

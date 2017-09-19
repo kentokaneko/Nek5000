@@ -384,7 +384,6 @@ c     res, h1, h2, and wt, since they are local variables.
 
          if(iter.eq.0) then                   !      -1
             call col3_acc    (r_gmres,ml_gmres,res,n) ! r = L  res
-c           call copy(r,res,n)
          else
             !update residual
             call copy_acc  (r_gmres,res,n)               ! r = res
@@ -393,7 +392,6 @@ c           call copy(r,res,n)
                                                      !      -1
             call col2_acc  (r_gmres,ml_gmres,n)          ! r = L   r
          endif
-
 
 #ifdef _OPENACC
 
@@ -420,10 +418,8 @@ c        construct or acc routine"
 
 !$ACC END DATA
 
-c!$acc update host(gamma_gmres(1))
 !$acc update host(gamma_gmres)
       temp = gamma_gmres(1)
-c     write (6,*) 'temp=',temp
 
 #else
          gamma_gmres(1) = sqrt(glsc3(r_gmres,r_gmres,wt,n)) ! gamma  = \/ (r,r)

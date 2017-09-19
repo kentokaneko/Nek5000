@@ -126,21 +126,11 @@ C-----------------------------------------------------------------------
       common /scrcg/ scrd(lg), scalar(2)
       common /scrcg2/ r(lg), w(lg), p(lg), z(lg)
 
-c     real r(lx1*ly1*lz1*lelt),
-c    $     w(lx1*ly1*lz1*lelt),
-c    $     p(lx1*ly1*lz1*lelt),
-c    $     z(lx1*ly1*lz1*lelt),
-c    $     scrd(lx1*ly1*lz1*lelt),
-c    $     scalar(2)   
-
       common /tdarray/ diagt(maxcg),upper(maxcg)
       common /iterhm/ niterhm
 c     character*4 name
  
 c **  zero out stuff for Lanczos eigenvalue estimator
-
-c!$acc data present(r,w,p,z,scrd,scalar)
-c!$acc&     present(f,h1,h2,mask,mult,binv)
 
       call rzero_acc(diagt,maxcg)
       call rzero_acc(upper,maxcg)
@@ -179,11 +169,6 @@ c     Set up diag preconditioner.
       call dssum(scrd,nx1,ny1,nz1)
       call invcol1_acc(scrd,nx1*ny1*nz1*nelv)
 
-!$acc update host(scrd)
-      do i=1,lx1*ly1*lz1*nelv
-c        write (6,*) 'd=',scrd(i)
-      enddo
-
       call copy_acc(r,f,n)
 
       call rzero_acc(x,n)
@@ -217,19 +202,10 @@ c     Check for non-trivial null-space
       do iter=1,niter
 
          call col3_acc(z,r,scrd,n)
-!$acc    update host(z)
-         do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'z=',z(i)
-         enddo
-c        stop
 
          rtz2=rtz1
          scalar(1)=vlsc3_acc(z,r,mult,n)
          scalar(2)=vlsc32_acc(r,mult,binv,n)
-
-c!$acc    update device(scalar)
-cc        call gop_acc(scalar,w,'+  ',2)
-c!$acc    update host(scalar)
 
          call gop(scalar,w,'+  ',2)
 
@@ -239,8 +215,6 @@ c!$acc    update host(scalar)
          if (iter.eq.1) rbn0 = rbn2
          if (param(22).lt.0) tol=abs(param(22))*rbn0
          if (tin.lt.0)       tol=abs(tin)*rbn0
-
-c        write (6,*) 'tol=',tol
 
          ifprint_hmh = .false.
          if (nio.eq.0.and.ifprint.and.param(74).ne.0) ifprint_hmh=.true.
@@ -267,50 +241,29 @@ c    &                       niter,rbn2,rbn0,tol
          call dssum  (w,nx1,ny1,nz1)
          call col2_acc   (w,mask,n)
 
-!$acc    update host(w)
-         do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'w=',w(i)
-         enddo
-c        stop
-c
          rho0 = rho
          rho  = glsc3_acc(w,p,mult,n)
          alpha=rtz1/rho
          alphm=-alpha
-c        write (6,*) 'rtz1=',rtz1
-c        write (6,*) 'rho=',rho
-c        stop
+
          call add2s2_acc(x,p ,alpha,n)
          call add2s2_acc(r,w ,alphm,n)
 
-c!$acc    update host(r)
-         do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'r=',r(i)
-         enddo
-c        stop
- 
 c        Generate tridiagonal matrix for Lanczos scheme
          if (iter.eq.1) then
             krylov = krylov+1
             diagt(iter) = rho/rtz1
-c           write (6,*) 'krylov,diagt(1)',krylov,diagt(1)
-c           stop
          elseif (iter.le.maxcg) then
             krylov = krylov+1
             diagt(iter)    = (beta**2 * rho0 + rho ) / rtz1
             upper(iter-1)  = -beta * rho0 / sqrt(rtz2 * rtz1)
-c           write (6,*)
-c    $      'krylov,diagt(2),upper(1)',krylov,diagt(2),upper(1)
-c           stop
          endif
  1000 enddo
 
-c!$acc end data
       niter = iter-1
 c
 c     if (nio.eq.0) write (6,3001) istep, '  Error Hmholtz ' // name,
 c    &                             niter,rbn2,rbn0,tol
-
 
 c3000 format(i11,a,1x,I7,1p4E13.4)
 c3001 format(i11,a,1x,I7,1p4E13.4)

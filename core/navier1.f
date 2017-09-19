@@ -213,6 +213,7 @@ C
 !$ACC DATA CREATE(work)  
       call invcol3_acc (WORK,RESPR,BM1,NTOT1)
       CALL col2_acc    (WORK,RESPR,NTOT1)
+!$acc update host(work)
       RINIT  = SQRT (GLSUM (WORK,NTOT1)/VOLVM1)
       IF (TOLPDF.GT.0.) THEN
          TOLSPL = TOLPDF

@@ -60,24 +60,11 @@ c     write (6,*) 'top of plan4_acc'
 
          call makef_acc
 
-c!$acc    update host(bfx,bfy,bfz)
-c         do k=1,lz1
-c         do j=1,ly1
-c         do i=1,lx1
-c            write (6,*) 'p4bf bfx=',bfx(i,j,k,1),i,j,k
-c            write (6,*) 'p4bf bfy=',bfy(i,j,k,1)
-c            write (6,*) 'p4bf bfz=',bfz(i,j,k,1)
-c         enddo
-c         enddo
-c         enddo
-cc        stop
-
          call sumab_acc(vx_e,vx,vxlag,n,ab,nab)
          call sumab_acc(vy_e,vy,vylag,n,ab,nab)
          call sumab_acc(vz_e,vz,vzlag,n,ab,nab)
 
-!$acc    update host(vx_e,vy_e,vz_e)
-
+!$acc    update host(vx_e,vy_e,vz_e) ! <- necessary
       else
          ! add user defined divergence to qtl 
          call add2_acc (qtl,usrdiv,n)
@@ -88,10 +75,6 @@ cc        stop
          ! mask Dirichlet boundaries
          call bcdirvc  (vx,vy,vz,v1mask,v2mask,v3mask) 
 !$acc    update device(vx,vy,vz)
-
-c        call outpost(vx,vy,vz,pr,t,'w_v')
-c        call outpost(v1mask,v2mask,v3mask,pr,t,'wma')
-c        stop
 
 c        first, compute pressure
 
@@ -106,12 +89,6 @@ c        first, compute pressure
          endif
 
          call crespsp_acc(respr)
-
-c!$acc    update host(respr)
-c        do i=1,lx1*ly1*lz1*nelv
-c           write (6,*) 'respr',i,respr(i,1,1,1)
-c        enddo
-c        stop
 
          call invers2_acc (h1,vtrans,n)
          call rzero_acc   (h2,n)
@@ -157,8 +134,6 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vx,dv1,n)      
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
-
-c        write (6,*) 'syncing point'
 
 !$acc update host(vx,vy,vz,pr)
 

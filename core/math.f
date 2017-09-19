@@ -2309,9 +2309,11 @@ c-----------------------------------------------------------------------
       subroutine chsign_acc(a,n)
       REAL A(n)
 C
+!$ACC PARALLEL LOOP PRESENT(a)
       DO I=1,N
          A(I) = -A(I)
       END DO
+!$ACC END PARALLEL
       return
       END
 C

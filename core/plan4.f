@@ -135,33 +135,6 @@ c but printed values are wierd  L1/L2 DIV(V) 6.9034-310   6.9034-310
          call add2_acc  (vy,dv2,n)
          call add2_acc  (vz,dv3,n)
 
-!$acc update host(vx,vy,vz,pr)
-
-         if (mod(istep,iostep).eq.0) then
-         write (6,*) 'sol dev',istep
-         do e=1,nelv
-         do k=1,lz1
-         do j=1,ly1
-         do i=1,lx1
-            write (6,*) 'sol pr=',pr(i,1,1,1),i,j,k
-         enddo
-         enddo
-         enddo
-         enddo
-         do e=1,nelv
-         do k=1,lz1
-         do j=1,ly1
-         do i=1,lx1
-            write (6,*) 'sol vx=',vx(i,j,k,e),i,j,k
-            write (6,*) 'sol vy=',vy(i,j,k,e)
-            write (6,*) 'sol vz=',vz(i,j,k,e)
-         enddo
-         enddo
-         enddo
-         enddo
-         call outpost(vx,vy,vz,pr,t,'wp4')
-         endif
-
          call plan4_acc_update_host
 
          IF (NIO.EQ.0) THEN

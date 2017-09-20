@@ -969,7 +969,7 @@ c     add old pressure term because we solve for delta p
       call bcdirsc (pr)
 !$acc update device(pr)
 
-      call axhelm_acc_debug(respr,pr,ta1,ta2,1,1)
+      call axhelm_acc(respr,pr,ta1,ta2,1,1)
       call chsign_acc  (respr,ntot1)
 
 c     add explicit (NONLINEAR) terms 

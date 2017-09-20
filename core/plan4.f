@@ -998,18 +998,9 @@ c     add explicit (NONLINEAR) terms
       dtbd = bd(1)/dt  !! FOR NOW, no QTL support (pff, 7/31/17)
 c     call admcol3(respr,qtl,bm1,dtbd,ntot1)
 
-!$acc update host(ta1,ta2,ta3,respr)
-c******************************************
-c TODO: still done on the cpu
-
 !$acc parallel loop gang private(w1,w2,w3)
-
-c!$acc parallel loop
-c!$acc& present(ta1,ta2,ta3,w3m1,rxm1,rym1,rzm1)
-c!$acc& present(sxm1,sym1,szm1,txm1,tym1,tzm1)
-c!$acc& present(dxtm1,bm1,qtl,respr)
       do e=1,nelv
-c!$acc  loop vector
+!$acc  loop vector
        do i=1,lx1*ly1*lz1
          w1(i,1,1,e) = (rxm1(i,1,1,e)*ta1(i,1,1,e) ! Jacobian
      $               +rym1(i,1,1,e)*ta2(i,1,1,e) ! included
@@ -1022,17 +1013,18 @@ c!$acc  loop vector
      $               +tzm1(i,1,1,e)*ta3(i,1,1,e))*w3m1(i,1,1)
        enddo
 
-c!$acc  loop vector collapse(3)
+!$acc  loop vector collapse(3)
        do k=1,nz1
        do j=1,ny1
        do i=1,nx1
           t1 = 0.0
-c!$acc     loop seq
+!$acc     loop seq
           do l=1,nx1
              t1 = t1 + dxm1(l,i)*w1(l,j,k,e) ! D^T
      $               + dxm1(l,j)*w2(i,l,k,e)
      $               + dxm1(l,k)*w3(i,j,l,e)
           enddo
+!$acc     end loop
           respr(i,j,k,e) = respr(i,j,k,e) + t1
      $                   + dtbd*bm1(i,j,k,e)*qtl(i,j,k,e)
        enddo
@@ -1041,27 +1033,8 @@ c!$acc     loop seq
 
       enddo
 !$acc end parallel
-c******************************************
+
 !$acc update host(respr,w1,w2,w3)
-
-c     call outpost(respr,wa1,wa2,wa3,t,'wc2')
-c     stop
-
-c!$acc update host(wa1,wa2,wa3,ta1,ta2,ta3,respr)
-c      if (if3d) then
-c         call cdtp    (wa1,ta1,rxm1,sxm1,txm1,1)
-c         call cdtp    (wa2,ta2,rym1,sym1,tym1,1)
-c         call cdtp    (wa3,ta3,rzm1,szm1,tzm1,1)
-c         do i=1,n
-c            respr(i,1,1,1) = respr(i,1,1,1)+wa1(i)+wa2(i)+wa3(i)
-c         enddo
-c      else
-c         call cdtp    (wa1,ta1,rxm1,sxm1,txm1,1)
-c         call cdtp    (wa2,ta2,rym1,sym1,tym1,1)
-c         do i=1,n
-c            respr(i,1,1,1) = respr(i,1,1,1)+wa1(i)+wa2(i)
-c         enddo
-c      endif
 
       dtbd = bd(1)/dt  !! FOR NOW, no QTL support (pff, 7/31/17)
 c     call admcol3_acc(respr,qtl,bm1,dtbd,ntot1)

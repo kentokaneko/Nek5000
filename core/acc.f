@@ -293,10 +293,6 @@ c-----------------------------------------------------------------------
       real v3(lx1,ly1,lz1,lelt)
       real tmpu1,tmpu2,tmpu3
 
-!$acc update host(d,u1,u2,u3,v1)
-c     call outpost(u1,u2,u3,d,v1,'wgd')
-c     stop
-
 !$acc data present (d (nx1,nx1))
 !$acc&     present (u1(nx1,ny1,nz1,nelv))
 !$acc&     present (u2(nx1,ny1,nz1,nelv),u3(nx1,ny1,nz1,nelv))
@@ -306,8 +302,7 @@ c     stop
 !$acc parallel loop collapse(4) gang worker vector
 !$acc&    private(tmpu1,tmpu2,tmpu3)
 
-cc!dir$ noblocking
-c!$acc kernels
+!dir$ noblocking
       do e=1,nelv
       do k=1,nz1
       do j=1,ny1
@@ -329,7 +324,6 @@ c!$acc kernels
       enddo
       enddo
       enddo
-c!$acc end kernels
 !$acc end parallel loop
 
 !$acc end data

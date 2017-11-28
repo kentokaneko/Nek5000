@@ -16,6 +16,9 @@ C
 
       COMMON /SCRNS/ TA(LX1,LY1,LZ1,LELT)
      $              ,TB(LX1,LY1,LZ1,LELT)
+     $              ,tc(lx1,ly1,lz1,lelt)
+     $              ,td(lx1,ly1,lz1,lelt)
+
       COMMON /SCRVH/ H1(LX1,LY1,LZ1,LELT)
      $              ,H2(LX1,LY1,LZ1,LELT)
 
@@ -66,9 +69,26 @@ c        if (ifaxis.and.ifmhd) isd = 2 !This is a problem if T is to be T!
          call add2    (h2,ta,n)
          call bcdirsc (t(1,1,1,1,ifield-1))
          call axhelm  (ta,t(1,1,1,1,ifield-1),h1,h2,imesh,ISD)
+
          call sub3    (tb,bq(1,1,1,1,ifield-1),ta,n)
          call bcneusc (ta,1)
          call add2    (tb,ta,n)
+
+         if (istep.gt.5) then
+            gamma = 1.
+            call rzero   (td,n)
+            call setprec (tc,h1,td,imesh,isd)
+            call invcol1 (tc,n)
+            call cmult   (tc,-gamma,n)
+            call axhelm  (td,tlag(1,1,1,1,1,ifield-1),h1,tc,imesh,isd)
+            call sub2    (bq(1,1,1,1,ifield-1),td,n)
+            call rzero   (h1,n)
+            call add2    (h2,tc,n)
+         endif
+
+         write (6,*) 'called modified cdscal'
+
+         ! ta is the u vector, tb is the residual
 
 c        call hmholtz (name4t,ta,tb,h1,h2
 c    $                 ,tmask(1,1,1,1,ifield-1)

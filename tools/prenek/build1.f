@@ -1163,16 +1163,6 @@ C     IF ELEMENT NUMBER IS NEGATIVE, ERASE ELEMENT
       DIMENSION ZBUFF(6),XYZCTR(3,6)
       DIMENSION IND(6)
 
-      if (.not.ifgraf) then
-        if (nel.gt.90 .and. iel.eq.91) 
-     $   call prsi('Showing only 90 elements of$',nel)
-        if (nel.gt.90 .and. iel.gt.90) return
-c       if (nel.gt.900 .and. iel.eq.901) 
-c    $   call prsi('Showing only 900 elements of$',nel)
-c       if (nel.gt.900 .and. iel.gt.900) return
-      endif
-
-
 C     Now, draw new elements for elements that were modified
       iiel=iabs(iel)
 C

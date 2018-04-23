@@ -9,6 +9,12 @@ c     Operator splitting technique.
 
       common /scrns/  resv  (lx1*ly1*lz1*lelv,3)
 
+      real xlag(lx1,ly1,lz1,lelt),
+     $     ylag(lx1,ly1,lz1,lelt),
+     $     zlag(lx1,ly1,lz1,lelt)
+
+      call opzero(xlag,ylag,zlag)
+
       n   = lx1*ly1*lz1*nelv
       n2  = lx2*ly2*lz2*nelv
       dt2 = dt/2
@@ -27,6 +33,8 @@ c     Operator splitting technique.
       enddo
 
       call midstep(vxlag,vylag,vzlag,prlag,0,dt)  ! One step of Pn-Pn-2
+
+      call opcopy(xlag,ylag,zlag,xm1,ym1,zm1) ! store mesh coordinates
 
       do i=1,n                                          ! Add  density*mass/dt,
          bfx(i,1,1,1)=bfx(i,1,1,1)+vxlag(i,1,1,1,2)     ! equivalent to using
@@ -53,6 +61,10 @@ c     Operator splitting technique.
          vx(i,1,1,1)=2*vx(i,1,1,1)-vxlag(i,1,1,1,1)
          vy(i,1,1,1)=2*vy(i,1,1,1)-vylag(i,1,1,1,1)
          vz(i,1,1,1)=2*vz(i,1,1,1)-vzlag(i,1,1,1,1)
+
+         xm1(i,1,1,1)=2*xm1(i,1,1,1)-xlag(i,1,1,1)
+         ym1(i,1,1,1)=2*ym1(i,1,1,1)-ylag(i,1,1,1)
+         zm1(i,1,1,1)=2*zm1(i,1,1,1)-zlag(i,1,1,1)
       enddo
 
       do i=1,n2

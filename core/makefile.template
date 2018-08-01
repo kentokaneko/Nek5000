@@ -42,7 +42,7 @@ papi.o nek_in_situ.o \
 reader_rea.o reader_par.o reader_re2.o \
 finiparser.o iniparser.o dictionary.o \
 hpf.o\
-linalg.o  schwarzli.o tens.o\
+linalg.o  schwarzli.o schwarzv.o tens.o\
 zgetv0.o  znaitr.o  znapps.o  znaup2.o  znaupd.o  zneigh.o  zneupd.o  zngets.o  zsortc.o  zstatn.o\
 dgetv0.o  dnapps.o  dnaupe.o  dneupd.o  dsapps.o  dsconv.o  dseupd.o  dsortr.o  dstqrb.o\
 dlaqrb.o  dnaup2.o  dnconv.o  dngets.o  dsaup2.o  dseigt.o  dsgets.o  dstatn.o\
@@ -429,3 +429,4 @@ $(OBJDIR)/dlahr2.o :$S/stdy/lib/lapack/double/dlahr2.f; $(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/tens.o :$S/stdy/tens.f; $(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/linalg.o :$S/stdy/linalg.f; $(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/schwarzli.o :$S/stdy/schwarzli.f; $(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/schwarzv.o :$S/stdy/schwarzv.f; $(FC) -c $(FL2) $< -o $@

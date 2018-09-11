@@ -43,27 +43,27 @@ reader_rea.o reader_par.o reader_re2.o \
 finiparser.o iniparser.o dictionary.o \
 hpf.o\
 linalg.o tens.o schwarzli.o schwarzv.o steady.o\
-iladlc.o  iladlr.o  ilazlc.o  ilazlr.o  iparmq.o\
-dbdsqr.o  dgesvd.o  dhseqr.o  dlahqr.o    dlaqr1.o  dlasq1.o  dorgbr.o  dormqr.o\
-dgebd2.o  dgetf2.o  disnan.o  dlahr2.o    dlaqr2.o  dlasq2.o  dorghr.o  dtgevc.o\
-dgebrd.o  dgetrf.o  dlabad.o  dlaisnan.o  dlaqr3.o  dlasq3.o  dorgl2.o  dtrevc.o\
-dgehd2.o  dgetrs.o  dlabrd.o  dlaln2.o    dlaqr4.o  dlasq4.o  dorglq.o  dtrexc.o\
-dgehrd.o  dggbak.o  dlacn2.o  dlange.o    dlaqr5.o  dlasq5.o  dorm2r.o  dtrsen.o\
-dgelq2.o  dggbal.o  dlacpy.o  dlanhs.o    dlarfx.o  dlasq6.o  dormbr.o  dtrsyl.o\
-dgelqf.o  dggev.o   dladiv.o  dlanv2.o    dlarnv.o  dlasv2.o  dormhr.o\
-dgeqr2.o  dgghrd.o  dlaexc.o  dlapy3.o    dlaruv.o  dlaswp.o  dorml2.o\
-dgeqrf.o  dhgeqz.o  dlag2.o   dlaqr0.o    dlas2.o   dlasy2.o  dormlq.o\
-zgegv.o   zggbal.o  zlacgv.o  zlanhs.o  zlarft.o  zlassq.o  zungqr.o\
+dlarnv.o  dlaruv.o  iladlc.o    ilazlr.o  iladlr.o  ilazlc.o  iparmq.o\
+dbdsqr.o  dgetf2.o  dlabad.o    dlaln2.o  dlaqr5.o  dlaswp.o  dormlq.o\
+dgebd2.o  dgetrf.o  dlabrd.o    dlange.o  dlarfx.o  dlasy2.o  dormqr.o\
+dgebrd.o  dgetrs.o  dlacn2.o    dlanhs.o  dlas2.o   dorgbr.o  dtgevc.o\
+dgehd2.o  dggbak.o  dlacpy.o    dlanv2.o  dlasq1.o  dorghr.o  dtrevc.o\
+dgehrd.o  dggbal.o  dladiv.o    dlapy3.o  dlasq2.o  dorgl2.o  dtrexc.o\
+dgelq2.o  dggev.o   dlaexc.o    dlaqr0.o  dlasq3.o  dorglq.o  dtrsen.o\
+dgelqf.o  dgghrd.o  dlag2.o     dlaqr1.o  dlasq4.o  dorm2r.o  dtrsyl.o\
+dgeqr2.o  dhgeqz.o  dlahqr.o    dlaqr2.o  dlasq5.o  dormbr.o\
+dgeqrf.o  dhseqr.o  dlahr2.o    dlaqr3.o  dlasq6.o  dormhr.o\
+dgesvd.o  disnan.o  dlaisnan.o  dlaqr4.o  dlasv2.o  dorml2.o\
 zgeqr2.o  zggev.o   zlacpy.o  zlarfb.o  zlartg.o  zrot.o    zunm2r.o\
 zgeqrf.o  zgghrd.o  zladiv.o  zlarf.o   zlascl.o  ztgevc.o  zunmqr.o\
 zggbak.o  zhgeqz.o  zlange.o  zlarfg.o  zlaset.o  zung2r.o\
+zggbal.o  zlacgv.o  zlanhs.o  zlarft.o  zlassq.o  zungqr.o\
+dmout.o   icnteq.o  iset.o    ivout.o   second_NONE.o dvout.o\
 dgetv0.o  dnconv.o  dsapps.o  dsesrt.o  dstatn.o\
 dnaitr.o  dneigh.o  dsaup2.o  dseupd.o  dstats.o\
 dnapps.o  dneupd.o  dsaupd.o  dsgets.o  dstqrb.o\
 dnaup2.o  dngets.o  dsconv.o  dsortc.o\
 dnaupd.o  dsaitr.o  dseigt.o  dsortr.o\
-dmout.o  icnteq.o  iset.o   ivout.o   second_NONE.o\
-dvout.o
 ################################################################################
 # MXM 
 MXM =  

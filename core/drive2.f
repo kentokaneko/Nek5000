@@ -1241,7 +1241,7 @@ c
 c
       tttstp = tttstp + 1e-7
       if (nio.eq.0) then
-         write(6,*) ''
+c        write(6,*) ''
          write(6,'(A)') 'runtime statistics:'
 
          pinit=tinit/tttstp
@@ -1408,7 +1408,7 @@ c        MPI_Allreduce(sync) timings
          write(6,*) 'allreduce_sync  max ',max_gop_sync 
          write(6,*) 'allreduce_sync  avg ',avg_gop_sync 
 #endif
-         write(6,*) ''
+c        write(6,*) ''
       endif
 
       if (lastep.eq.1) then

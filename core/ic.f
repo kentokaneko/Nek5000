@@ -2396,13 +2396,7 @@ c            if(nid.eq.0) write(6,*) 'Reading mesh'
          offs = offs0 + iofldsr*stride + ldim*strideB
          call byte_set_view(offs,ifh_mbyte)
          if (ifgetu) then
-            if (ifmhd.and.ifile.eq.2) then
-c               if(nid.eq.0) write(6,*) 'Reading B field'
-               call mfi_getv(bx,by,bz,wk,lwk,.false.)
-            else
-c               if(nid.eq.0) write(6,*) 'Reading velocity field'
-               call mfi_getv(vx,vy,vz,wk,lwk,.false.)
-            endif
+            call mfi_getv(vx,vy,vz,wk,lwk,.false.)
          else
             call mfi_getv(vx,vy,vz,wk,lwk,.true.)
          endif
@@ -2413,7 +2407,6 @@ c               if(nid.eq.0) write(6,*) 'Reading velocity field'
          offs = offs0 + iofldsr*stride + strideB
          call byte_set_view(offs,ifh_mbyte)
          if (ifgetp) then
-c           if(nid.eq.0) write(6,*) 'Reading pressure field'
             call mfi_gets(pm1,wk,lwk,.false.)
          else
             call mfi_gets(pm1,wk,lwk,.true.)
@@ -2425,7 +2418,6 @@ c           if(nid.eq.0) write(6,*) 'Reading pressure field'
          offs = offs0 + iofldsr*stride + strideB
          call byte_set_view(offs,ifh_mbyte)
          if (ifgett) then
-c            if(nid.eq.0) write(6,*) 'Reading temperature field'
             call mfi_gets(t,wk,lwk,.false.)
          else
             call mfi_gets(t,wk,lwk,.true.)
@@ -2439,7 +2431,6 @@ c            if(nid.eq.0) write(6,*) 'Reading temperature field'
             offs = offs0 + iofldsr*stride + strideB
             call byte_set_view(offs,ifh_mbyte)
             if (ifgtps(k)) then
-c               if(nid.eq.0) write(6,'(A,I2,A)') ' Reading ps',k,' field'
                call mfi_gets(t(1,1,1,1,k+1),wk,lwk,.false.)
             else
                call mfi_gets(t(1,1,1,1,k+1),wk,lwk,.true.)

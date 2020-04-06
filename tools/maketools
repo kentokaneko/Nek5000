@@ -12,10 +12,11 @@
 
 # C compiler
 #CC="gcc"
-#CFLAGS=""
+CFLAGS="-I/opt/X11/include"
 
 # linking flags
 #LDFLAGS="-L$HOME/lib -lm"
+LSFLAGS="-I/opt/X11/include"
 
 
 

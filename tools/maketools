@@ -129,7 +129,7 @@ case $FCcomp in
                CPPF="-Mpreprocess"
                BIGMEM="-mcmodel=medium"
                ;;
-  *gfortran* || *f95*)  R8="-fdefault-real-8 -fdefault-double-8"
+  *gfortran* | *f95*)  R8="-fdefault-real-8 -fdefault-double-8"
                CPPF="-std=legacy -cpp"
                BIGMEM="-mcmodel=medium"
                ;;

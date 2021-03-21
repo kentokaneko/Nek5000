@@ -94,6 +94,13 @@ c-----------------------------------------------------------------------
                write (10,4) ifc,lglel(ie),cbc(ifc,ie,1)
             enddo
             close (unit=10)
+            if (ifheat) then
+               open (unit=10,file='bc2.dat',access='APPEND')
+               do ifc=1,2*ldim
+               write (10,4) ifc,lglel(ie),cbc(ifc,ie,2)
+               enddo
+               close (unit=10)
+            endif
          endif
          call nekgsync
       enddo

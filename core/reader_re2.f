@@ -1183,7 +1183,8 @@ c              if (wdsizi.eq.8) call copyi4(ielg,buf(jj,1),1)
       n = nel
       key = 1 
 
-      call fgslib_crystal_tuple_transfer(cr_re2,n,lelt,vi,ni,
+      nrmax=iglmax(nel)
+      call fgslib_crystal_tuple_transfer(cr_re2,n,nrmax,vi,ni,
      &   vl,0,vr,0,key)
       ielg0=n
 

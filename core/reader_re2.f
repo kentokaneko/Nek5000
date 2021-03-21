@@ -914,7 +914,11 @@ c-----------------------------------------------------------------------
       integer         vi  (li  ,nrmax)
       common /ctmp1/  vi
 
-      if (.not.ifread) return
+      if (.not.ifread) then
+         re2off_b=re2off_b+lrs4*4*nelgt
+         return
+      endif
+
       if (nio.eq.0) write (6,*) 'reading mesh (rd2)',re2off_b,nelgt
 
       lrs4 = lrs*wdsizi/4
@@ -1001,7 +1005,11 @@ c-----------------------------------------------------------------------
 
       if (nio.eq.0)
      $   write (6,*) 'reading curved sides (rd2) ',re2off_b,nrg
-      if (nrg.eq.0.or..not.ifread) return
+
+      if (nrg.eq.0.or..not.ifread) then
+         re2off_b = re2off_b + nrg*lrs4*4
+         return
+      endif
 
       nrgmax=npr*nrmax/(li*2)
 
@@ -1080,7 +1088,11 @@ c-----------------------------------------------------------------------
 
       re2off_b = re2off_b + 4*nwds4r
 
-      if (.not.ifread) return
+      if (.not.ifread) then
+         re2off_b = re2off_b + nrg*4*lrs4
+         return
+      endif
+
       if (nio.eq.0) write (6,*) 'reading bc (rd2) ',re2off_b,ifield,nrg
 
       ! fill up with default

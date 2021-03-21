@@ -900,9 +900,10 @@ c-----------------------------------------------------------------------
 
       logical ifbswap,ifread
 
-      parameter(nrmax = lelt)             ! maximum number of records
       parameter(lrs   = 1+ldim*(2**ldim)) ! record size: group x(:,c) ...
       parameter(li    = 2*lrs+2)
+d     parameter(nrmax = lelt)             ! maximum number of records
+      parameter(nrmax = (4*lx1*ly1*lz1*lelt)/li) ! maximum number of records
 
       integer         bufr(li-2,nrmax)
       common /scrns/  bufr
@@ -924,7 +925,8 @@ c-----------------------------------------------------------------------
 
       ierr=0
 
-      nelgmax=npr*nrmax/(4*li)
+c     nelgmax=npr*nrmax/(4*li)
+      nelgmax=npr*(nrmax/4)
 
       do while (ieg0.le.nelgt)
          ieg1=min(ieg0+nelgmax-1,nelgt)
@@ -960,9 +962,10 @@ c-----------------------------------------------------------------------
 
       common /nekmpi/ nidd,npp,nekcomm,nekgroup,nekreal
 
-      parameter(nrmax = 12*lelt) ! maximum number of records
       parameter(lrs   = 2+1+5)   ! record size: eg iside curve(5) ccurve
       parameter(li    = 2*lrs+2) ! originally 2*lrs+1
+c     parameter(nrmax = 12*lelt) ! maximum number of records
+      parameter(nrmax = (4*lx1*ly1*lz1*lelt)/li) ! maximum number of records
 
       integer         bufr(li-1,nrmax)
       common /scrns/  bufr
@@ -1007,7 +1010,8 @@ c-----------------------------------------------------------------------
          return
       endif
 
-      nrgmax=npr*nrmax/(li*4)
+c     nrgmax=npr*nrmax/(li*4)
+      nrgmax=npr*(nrmax/4)
 
       ir0=1
       ir1=1
@@ -1046,9 +1050,10 @@ c-----------------------------------------------------------------------
       logical      ifbswap
       logical      ifread
 
-      parameter(nrmax = 6*lelt) ! maximum number of records
       parameter(lrs   = 2+1+5)  ! record size: eg iside bl(5) cbl
       parameter(li    = 2*lrs+2) ! originally 2*lrs+1
+      parameter(nrmax = (4*lx1*ly1*lz1*lelt)/li) ! maximum number of records
+c     parameter(nrmax = 6*lelt) ! maximum number of records
 
       integer         bufr(li-1,nrmax)
       common /scrns/  bufr
@@ -1097,7 +1102,7 @@ c-----------------------------------------------------------------------
       enddo
       enddo
 
-      nrgmax=npr*nrmax/(li*4)
+      nrgmax=npr*(nrmax/4)
 
       ir0=1
       ir1=1

@@ -176,6 +176,7 @@ void byte_seek(int *n,int *ierr)
         *ierr=1;
         return;
      }
+     flag=READ;
   }
 
   fseek(fp,(*n)*sizeof(float),SEEK_SET);

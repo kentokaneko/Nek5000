@@ -898,8 +898,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-      logical ifbswap
-      logical ifread
+      logical ifbswap,ifread
 
       parameter(nrmax = lelt)             ! maximum number of records
       parameter(lrs   = 1+ldim*(2**ldim)) ! record size: group x(:,c) ...
@@ -907,9 +906,6 @@ c-----------------------------------------------------------------------
 
       integer         bufr(li-2,nrmax)
       common /scrns/  bufr
-
-      real*4 buff(li-2,nrmax)
-      common /scrk/  buff
 
       integer         vi  (li  ,nrmax)
       common /ctmp1/  vi
@@ -1140,8 +1136,7 @@ c-----------------------------------------------------------------------
       include 'INPUT'
       include 'PARALLEL'
 
-      real*4 buf(ni-2,1)
-      integer vi(ni,1)
+      integer buf(ni-2,1),vi(ni,1)
       logical ifswp,if1ie
 
       melg=ielg1-ielg0+1

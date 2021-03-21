@@ -1080,8 +1080,7 @@ c-----------------------------------------------------------------------
          nrg = nrg4(1)
       endif
 
-      lrs4      = lrs*wdsizi/4
-
+      lrs4     = lrs*wdsizi/4
       re2off_b = re2off_b + 4*nwds4r
 
       if (.not.ifread) then

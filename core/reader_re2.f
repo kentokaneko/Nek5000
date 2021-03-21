@@ -924,7 +924,7 @@ c-----------------------------------------------------------------------
 
       ierr=0
 
-      nelgmax=npr*nrmax/(2*li)
+      nelgmax=npr*nrmax/(4*li)
 
       do while (ieg0.le.nelgt)
          ieg1=min(ieg0+nelgmax-1,nelgt)
@@ -1007,7 +1007,7 @@ c-----------------------------------------------------------------------
          return
       endif
 
-      nrgmax=npr*nrmax/(li*2)
+      nrgmax=npr*nrmax/(li*4)
 
       ir0=1
       ir1=1
@@ -1097,7 +1097,7 @@ c-----------------------------------------------------------------------
       enddo
       enddo
 
-      nrgmax=npr*nrmax/(li*2)
+      nrgmax=npr*nrmax/(li*4)
 
       ir0=1
       ir1=1

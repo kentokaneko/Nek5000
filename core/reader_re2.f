@@ -76,28 +76,32 @@ c-----------------------------------------------------------------------
 
             open (unit=10,file='mesh.dat',access='APPEND')
             do ic=1,2**ldim
-               write (10,*) ic,lglel(ie),xc(ic,ie),yc(ic,ie)
+               write (10,1) ic,lglel(ie),xc(ic,ie),yc(ic,ie)
             enddo
             close (unit=10)
 
             open (unit=10,file='curve.dat',access='APPEND')
             do ifc=1,2*ldim
                do ic=1,5
-                  write (10,*) ifc,lglel(ie),curve(ic,ifc,ie)
+                  write (10,2) ifc,lglel(ie),curve(ic,ifc,ie)
                enddo
-               write (10,*) ifc,lglel(ie),ccurve(ifc,ie)
+               write (10,3) ifc,lglel(ie),ccurve(ifc,ie)
             enddo
             close (unit=10)
 
-            open (unit=10,file='bc.dat',access='APPEND')
+            open (unit=10,file='bc1.dat',access='APPEND')
             do ifc=1,2*ldim
-               write (10,*) ifc,lglel(ie),cbc(ifc,ie,1)
-c              write (10,*) ifc,ieg,cbc(ifc,ie,1)
+               write (10,4) ifc,lglel(ie),cbc(ifc,ie,1)
             enddo
             close (unit=10)
          endif
          call nekgsync
       enddo
+
+    1 format (i8,i8,1p2e16.8)
+    2 format (i8,i8,1p2e16.8)
+    3 format (i8,i8,' ',a1)
+    4 format (i8,i8,' ',a3)
 #endif
 
       etime_t = dnekclock_sync() - etime0

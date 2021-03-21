@@ -902,7 +902,7 @@ c-----------------------------------------------------------------------
 
       parameter(lrs   = 1+ldim*(2**ldim)) ! record size: group x(:,c) ...
       parameter(li    = 2*lrs+2)
-d     parameter(nrmax = lelt)             ! maximum number of records
+c     parameter(nrmax = lelt)             ! maximum number of records
       parameter(nrmax = (4*lx1*ly1*lz1*lelt)/li) ! maximum number of records
 
       integer         bufr(li-2,nrmax)

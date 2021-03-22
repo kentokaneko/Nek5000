@@ -474,6 +474,27 @@ c    1       format(a5,2i12,i2)
          if (ifbswap) call byte_reverse(wk,(nvi+1)*nelr,ierr)
       endif
 
+#ifdef DEBUG
+      do ieg=1,nelgt
+         if (nid.eq.gllnid(ieg)) then
+            ie=gllel(ieg)
+
+            if (ieg.eq.1) then
+                open (unit=10,file='con.dat')
+            else
+                open (unit=10,file='con.dat',access='APPEND')
+            endif
+
+            do i=1,nvi+1
+                write (10,'(i8,i8)') lglel(ie),wk(i+(ie-1)*(nvi+1))
+            enddo
+
+            close (unit=10)
+         endif
+         call nekgsync
+      enddo
+#endif
+
       return
 
  100  continue

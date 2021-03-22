@@ -74,13 +74,23 @@ c-----------------------------------------------------------------------
          if (nid.eq.gllnid(ieg)) then
             ie=gllel(ieg)
 
-            open (unit=10,file='mesh.dat',access='APPEND')
+            if (ieg.eq.1) then
+                open (unit=10,file='mesh.dat')
+            else
+                open (unit=10,file='mesh.dat',access='APPEND')
+            endif
+
             do ic=1,2**ldim
                write (10,1) ic,lglel(ie),xc(ic,ie),yc(ic,ie)
             enddo
             close (unit=10)
 
-            open (unit=10,file='curve.dat',access='APPEND')
+            if (ieg.eq.1) then
+                open (unit=10,file='curve.dat')
+            else
+                open (unit=10,file='curve.dat',access='APPEND')
+            endif
+
             do ifc=1,2*ldim
                do ic=1,5
                   write (10,2) ifc,lglel(ie),curve(ic,ifc,ie)
@@ -89,13 +99,22 @@ c-----------------------------------------------------------------------
             enddo
             close (unit=10)
 
-            open (unit=10,file='bc1.dat',access='APPEND')
+            if (ieg.eq.1) then
+                open (unit=10,file='bc1.dat')
+            else
+                open (unit=10,file='bc1.dat',access='APPEND')
+            endif
+
             do ifc=1,2*ldim
                write (10,4) ifc,lglel(ie),cbc(ifc,ie,1)
             enddo
             close (unit=10)
             if (ifheat) then
-               open (unit=10,file='bc2.dat',access='APPEND')
+               if (ieg.eq.1) then
+                   open (unit=10,file='bc2.dat')
+               else
+                   open (unit=10,file='bc2.dat',access='APPEND')
+               endif
                do ifc=1,2*ldim
                write (10,4) ifc,lglel(ie),cbc(ifc,ie,2)
                enddo

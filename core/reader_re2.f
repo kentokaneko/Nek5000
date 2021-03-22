@@ -925,14 +925,13 @@ c     parameter(nrmax = lelt)             ! maximum number of records
 
       ierr=0
 
-c     nelgmax=npr*nrmax/(4*li)
       nelgmax=npr*(nrmax/4)
 
       do while (ieg0.le.nelgt)
          ieg1=min(ieg0+nelgmax-1,nelgt)
          ieg00=ieg0
          call byte_readp(bufr,vi,lrs4,ieg0,ieg1,re2off_b/4
-     $      ,li,npr,.false.,.false.,ierr)
+     $      ,li,npr,.false.,.false.,re2fle,ierr)
          
          n=ieg0
          ieg0=ieg1+1
@@ -1010,7 +1009,6 @@ c     parameter(nrmax = 12*lelt) ! maximum number of records
          return
       endif
 
-c     nrgmax=npr*nrmax/(li*4)
       nrgmax=npr*(nrmax/4)
 
       ir0=1
@@ -1018,7 +1016,7 @@ c     nrgmax=npr*nrmax/(li*4)
       do while (ir0.le.nrg)
          ir1=min(ir0+nrgmax-1,nrg)
          call byte_readp(bufr,vi,lrs4,ir0,ir1,re2off_b/4
-     $      ,li,npr,ifbswap,.true.,ierr)
+     $      ,li,npr,ifbswap,.true.,re2fle,ierr)
          call nekgsync
 
          n=ir0
@@ -1110,7 +1108,7 @@ c     parameter(nrmax = 6*lelt) ! maximum number of records
          ir1=min(ir0+nrgmax-1,nrg)
          ir00=ir0
          call byte_readp(bufr,vi,lrs4,ir0,ir1,re2off_b/4
-     $      ,li,npr,ifbswap,.true.,ierr)
+     $      ,li,npr,ifbswap,.true.,re2fle,ierr)
 
          n=ir0
          ir0=ir1+1
@@ -1134,7 +1132,7 @@ c     parameter(nrmax = 6*lelt) ! maximum number of records
       end
 c-----------------------------------------------------------------------
       subroutine byte_readp(buf,vi,nbsize,ielg0,ielg1,ioff,
-     $   ni,npr,ifswp,if1ie,ierr)
+     $   ni,npr,ifswp,if1ie,fname,ierr)
 
       include 'SIZE'
       include 'INPUT'
@@ -1142,6 +1140,7 @@ c-----------------------------------------------------------------------
 
       integer buf(ni-2,1),vi(ni,1)
       logical ifswp,if1ie
+      character*132 fname
 
       melg=ielg1-ielg0+1
 
@@ -1156,7 +1155,7 @@ c-----------------------------------------------------------------------
       joff=ioff+(jelg-1)*nbsize
 
       if (nel.ne.0) then
-         call byte_open(re2fle,ierr)
+         call byte_open(fname,ierr)
          call byte_seek(joff,ierr)
          call byte_read(buf,nbsize*nel,ierr)
 
@@ -1189,6 +1188,7 @@ c              if (wdsizi.eq.8) call copyi4(ielg,buf(jj,1),1)
       key = 1 
 
       nrmax=(lx1*ly1*lz1*lelt*4)/ni
+
       call fgslib_crystal_tuple_transfer(cr_re2,n,nrmax,vi,ni,
      &   vl,0,vr,0,key)
 

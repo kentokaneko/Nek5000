@@ -341,6 +341,8 @@ c-----------------------------------------------------------------------
 
       common /scrns/ vi
       common /ctmp1/ rwk
+      common /nekmpi/ nidd,npp,nekcomm,nekgroup,nekreal
+
 
       logical ifbswap,if_byte_swap_test
       logical ifco2, ifcon
@@ -451,11 +453,12 @@ c    1       format(a5,2i12,i2)
 
          ir0=1
          ir1=1
+         call fgslib_crystal_setup(cr_re2,nekcomm,np)
 
          do while (ir0.le.nelgt)
             ir1=min(ir0+nrmax-1,nelgt)
-            call byte_readp(rwk,vi,nvi+1,1,ir0,ir1,offs0/4,
-     $         nvi+3,npr,.false.,.false.,ierr)
+            call byte_readp(rwk,vi,nvi+1,ir0,ir1,offs0/4,
+     $         nvi+3,npr,.false.,.false.,confle,ierr)
 
             nel=ir0
             ir0=ir1+1
@@ -465,6 +468,8 @@ c    1       format(a5,2i12,i2)
                ipt=ipt+1
             enddo
          enddo
+
+         call fgslib_crystal_free(cr_re2)
 
          if (ifbswap) call byte_reverse(wk,(nvi+1)*nelr,ierr)
       endif

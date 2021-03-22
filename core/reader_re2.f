@@ -1149,7 +1149,7 @@ c-----------------------------------------------------------------------
       mid=nid/idis
 
       nel=0
-      if (mod(nid,idis).eq.0)
+      if ((mid*idis).eq.nid.and.mid.lt.npr)
      $   nel=melg/npr+min(1,max(0,mod(melg,npr)-mid))
 
       jelg=igl_running_sum(nel)-nel+ielg0
@@ -1191,6 +1191,7 @@ c              if (wdsizi.eq.8) call copyi4(ielg,buf(jj,1),1)
       nrmax=(lx1*ly1*lz1*lelt*4)/ni
       call fgslib_crystal_tuple_transfer(cr_re2,n,nrmax,vi,ni,
      &   vl,0,vr,0,key)
+
       ielg0=n
 
       return

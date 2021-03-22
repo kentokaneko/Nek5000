@@ -418,7 +418,7 @@ c    1       format(a5,2i12,i2)
       if (nelgti .ne. nelgt)
      $   call exitti('nelgt for mesh/con differs!$',0)
       if (nelgvi .ne. nelgv)
-     $   call exitti('nelgt for mesh/con differs!$',0)
+     $   call exitti('nelgv for mesh/con differs!$',0)
 
       if (ifco2 .and. ifmpiio) then
         if (nid.eq.0) call byte_close(ierr)

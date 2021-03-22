@@ -448,7 +448,7 @@ c    1       format(a5,2i12,i2)
 
          npr=min(1024,np)
 
-         nrmax=npr*((lx1*ly1*lz1*lelt*4)/(nvi+3))/4)
+         nrmax=npr*(((lx1*ly1*lz1*lelt*4)/(nvi+3))/4)
          ipt=1
 
          ir0=1

@@ -337,8 +337,10 @@ c-----------------------------------------------------------------------
       include 'PARALLEL'
 
       integer nwk,nelr,nv,ierr
-      integer wk(nwk)
-     
+      integer wk(nwk),vi(lx1*ly1*lz1*lelt*6),rwk(lx1*ly1*lz1*lelt*4)
+
+      common /scrns/ vi
+      common /ctmp1/ rwk
 
       logical ifbswap,if_byte_swap_test
       logical ifco2, ifcon
@@ -433,15 +435,46 @@ c    1       format(a5,2i12,i2)
         call err_chk(ierr,' Error while reading con file!$')
         call byte_close_mpi(ifh,ierr)
         if (ifbswap) call byte_reverse(wk,(nvi+1)*nelr,ierr)
+      else if (ifco2) then
+         if (nid.eq.0) call byte_close(ierr)
+         offs0 = sizeof(hdr) + sizeof(test)
+
+         call lim_chk(nelr*(nvi+1),nwk,'nelr ','nwk   ','read_con  ')
+
+         call err_chk(ierr,' Error while reading con file!$')
+         call byte_close(ierr)
+
+         npr=min(1024,np)
+
+         nrmax=npr*((lx1*ly1*lz1*lelt*4)/(4*(nvi+3)))
+         ipt=1
+
+         ir0=1
+         ir1=1
+
+         do while (ir0.le.nelgt)
+            ir1=min(ir0+nrmax-1,nelgt)
+            call byte_readp(rwk,vi,nvi+1,1,ir0,ir1,offs0/4,
+     $         nvi+3,npr,.false.,.false.,ierr)
+
+            nel=ir0
+            ir0=ir1+1
+            do i = 1,nel
+               call icopy(wk(1+(ipt-1)*(nvi+1)),
+     $            vi(3+(nvi+3)*(i-1)),nvi+1)
+               ipt=ipt+1
+            enddo
+         enddo
+
+         if (ifbswap) call byte_reverse(wk,(nvi+1)*nelr,ierr)
       endif
 
       return
 
-
  100  continue
       call err_chk(ierr,'Error opening/reading con file$')
-      return
 
+      return
       end
 c-----------------------------------------------------------------------
 #if defined(PARRSB)      

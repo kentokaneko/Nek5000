@@ -1150,6 +1150,117 @@ c     parameter(nrmax = 6*lelt) ! maximum number of records
 
       end
 c-----------------------------------------------------------------------
+      subroutine byte_readp_db(buf,vi,nbsize,ielg0,ielg1,ioff,
+     $   ni,npr,ifswp,if1ie,fname,ierr)
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'PARALLEL'
+
+      integer buf(ni-2,1),vi(ni,1)
+      logical ifswp,if1ie
+      character*132 fname
+
+      melg=ielg1-ielg0+1
+
+      idis=np/npr
+      mid=nid/idis
+
+      nel=0
+      if ((mid*idis).eq.nid.and.mid.lt.npr) then
+         nel=melg/npr+min(1,max(0,mod(melg,npr)-mid))
+      else
+         mid=-1
+      endif
+
+      jelg=igl_running_sum(nel)-nel+ielg0
+      joff=ioff+(jelg-1)*nbsize
+
+      if (nel.ne.0) then
+         call byte_open(fname,ierr)
+         call byte_seek(joff,ierr)
+         call byte_read(buf,nbsize*nel,ierr)
+
+         do i = 1,nel
+            jj      = (i-1)*nbsize + 1
+            if (ifswp) then 
+               lrs4s = nbsize - wdsizi/4 ! words to swap (last is char)
+               if (wdsizi.eq.8) call byte_reverse8(buf(jj,1),lrs4s,ierr)
+               if (wdsizi.eq.4) call byte_reverse (buf(jj,1),lrs4s,ierr)
+            endif
+
+            if (if1ie) then
+c              ielg = buf(jj,1)
+c              if (wdsizi.eq.8) call copyi4(ielg,buf(jj,1),1)
+               call copyi4(ielg,buf(jj,1),1)
+            else
+                ielg = jelg - 1 + i ! elements are stored in global order
+            endif
+
+            do j=1,ni
+               if (j.eq.1) vi(1,i) = gllnid(ielg)
+               if (j.eq.2) vi(2,i) = ielg
+               if (j.eq.3) call icopy(vi(3,i),buf(jj,1),nbsize)
+            enddo
+         enddo
+         call byte_close(ierr)
+      endif
+
+      n = nel
+      key = 1 
+
+      nrmax=(lx1*ly1*lz1*lelt*4)/ni
+
+#ifdef DEBUG
+      do i=1,npr
+         if ((mid+1).eq.i) then
+            write (6,'(a8,8i5)')
+     $         'cr_info ',nid,mid,ielg0,ielg1,nel,jelg,npr,idis
+            do i=1,n
+               if (vi(2,i).ne.buf(1,i)) write (6,'(a9,6i5)')
+     $            'cr_error ',nid,i,vi(1,i),vi(2,i),vi(3,i),buf(1,i)
+            enddo
+         endif
+         call nekgsync
+      enddo
+      if (nid.eq.0) write (6,*) ' '
+      do i=1,npr
+         if ((mid+1).eq.i) then
+            do i=1,n
+               write (6,'(a9,6i5)')
+     $            'cr_pre ',nid,i,vi(1,i),vi(2,i),vi(3,i),buf(1,i)
+            enddo
+         endif
+         call nekgsync
+      enddo
+      if (nid.eq.0) write (6,*) ' '
+#endif
+
+      call fgslib_crystal_tuple_transfer(cr_re2,n,nrmax,vi,ni,
+     &   vl,0,vr,0,key)
+      call fgslib_crystal_tuple_sort(cr_re2,n,vi,ni,vl,0,vr,0,2,1)
+
+#ifdef DEBUG
+      if (nid.eq.0) write (6,*) ' '
+      do ip=1,np
+         if ((nid+1).eq.ip) then
+            do i=1,n
+               write (6,'(a9,6i5)')
+     $            'cr_post ',nid,i,vi(1,i),vi(2,i),vi(3,i),buf(1,i)
+            enddo
+         endif
+         call nekgsync
+      enddo
+#endif
+
+c     call nekgsync
+c     call exitt0
+
+      ielg0=n
+
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine byte_readp(buf,vi,nbsize,ielg0,ielg1,ioff,
      $   ni,npr,ifswp,if1ie,fname,ierr)
 
@@ -1210,6 +1321,7 @@ c              if (wdsizi.eq.8) call copyi4(ielg,buf(jj,1),1)
 
       call fgslib_crystal_tuple_transfer(cr_re2,n,nrmax,vi,ni,
      &   vl,0,vr,0,key)
+      call fgslib_crystal_tuple_sort(cr_re2,n,vi,ni,vl,0,vr,0,2,1)
 
       ielg0=n
 

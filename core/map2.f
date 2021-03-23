@@ -457,9 +457,8 @@ c    1       format(a5,2i12,i2)
 
          do while (ir0.le.nelgt)
             ir1=min(ir0+nrmax-1,nelgt)
-            call byte_readp_db(rwk,vi,nvi+1,ir0,ir1,offs0/4,
+            call byte_readp(rwk,vi,nvi+1,ir0,ir1,offs0/4,
      $         nvi+3,npr,.false.,.false.,confle,ierr)
-c    $         nvi+3,npr,.false.,.true.,confle,ierr)
 
             nel=ir0
             ir0=ir1+1

@@ -69,7 +69,7 @@ c-----------------------------------------------------------------------
 #endif
       call fgslib_crystal_free(cr_re2)
 
-#ifdef DEBUG
+#ifdef DDAT
       do ieg=1,nelgt
          if (nid.eq.gllnid(ieg)) then
             ie=gllel(ieg)

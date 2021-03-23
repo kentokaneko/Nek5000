@@ -474,7 +474,7 @@ c    1       format(a5,2i12,i2)
          if (ifbswap) call byte_reverse(wk,(nvi+1)*nelr,ierr)
       endif
 
-#ifdef DEBUG
+#ifdef DDAT
       do ieg=1,nelgt
          if (nid.eq.gllnid(ieg)) then
             ie=gllel(ieg)

@@ -453,9 +453,16 @@ c    1       format(a5,2i12,i2)
 
          ir0=1
          ir1=1
+         iloop=0
+         melgt=0
+
          call fgslib_crystal_setup(cr_re2,nekcomm,np)
 
+         if (nio.eq.0) write (6,'(a24,i10,i8)')
+     $      'start reading con (rd2) ',offs0,nelgt
+
          do while (ir0.le.nelgt)
+            iloop=iloop+1
             ir1=min(ir0+nrmax-1,nelgt)
             call byte_readp(rwk,vi,nvi+1,ir0,ir1,offs0/4,
      $         nvi+3,npr,.false.,.false.,confle,ierr)
@@ -467,7 +474,11 @@ c    1       format(a5,2i12,i2)
      $            vi(3+(nvi+3)*(i-1)),nvi+1)
                ipt=ipt+1
             enddo
+            melgt=melgt+nel
          enddo
+
+         if (nio.eq.0) write (6,'(a24,i10,i8)')
+     $      'done  reading con (rd2) ',offs0+4*melgt*(nvi+1),melgt
 
          call fgslib_crystal_free(cr_re2)
 

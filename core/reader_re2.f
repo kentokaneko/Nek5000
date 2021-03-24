@@ -935,18 +935,22 @@ c     parameter(nrmax = lelt)             ! maximum number of records
          return
       endif
 
-      if (nio.eq.0) write (6,*) 'reading mesh (rd2)',re2off_b,nelgt
+      if (nio.eq.0) write (6,'(a25,i10,i8)')
+     $   'start reading mesh (rd2) ',re2off_b,nelgt
 
       lrs4 = lrs*wdsizi/4
 
       ieg0=1
       ieg1=1
+      iloop=0
 
       ierr=0
+      melgt=0
 
       nelgmax=npr*(nrmax/4)
 
       do while (ieg0.le.nelgt)
+         iloop=iloop+1
          ieg1=min(ieg0+nelgmax-1,nelgt)
          ieg00=ieg0
          call byte_readp(bufr,vi,lrs4,ieg0,ieg1,re2off_b/4
@@ -962,8 +966,14 @@ c     parameter(nrmax = lelt)             ! maximum number of records
              call buf_to_xyz(bufr,iel,ifbswap,ierr)
              if (ierr.ne.0) goto 100
          enddo
+         melgt=melgt+n
       enddo
+
       re2off_b=re2off_b+lrs4*4*nelgt
+      melgt=iglsum(melgt,1)
+
+      if (nio.eq.0) write (6,'(a25,i10,i8,i5)')
+     $   'done  reading mesh (rd2) ',re2off_b,melgt,iloop
 
  100  call err_chk(ierr,'Error reading .re2 mesh$')
 
@@ -1020,10 +1030,10 @@ c     parameter(nrmax = 12*lelt) ! maximum number of records
 
       re2off_b = re2off_b + 4*nwds4r
 
-      if (nio.eq.0)
-     $   write (6,*) 'reading curved sides (rd2) ',re2off_b,nrg
+      if (nio.eq.0) write (6,'(a33,i10,i8)')
+     $   'start reading curved sides (rd2) ',re2off_b,nrg
 
-      if (nrg.eq.0.or..not.ifread) then
+      if (.not.ifread) then
          re2off_b = re2off_b + nrg*lrs4*4
          return
       endif
@@ -1032,7 +1042,11 @@ c     parameter(nrmax = 12*lelt) ! maximum number of records
 
       ir0=1
       ir1=1
+      iloop=0
+      mrg=0
+
       do while (ir0.le.nrg)
+         iloop=iloop+1
          ir1=min(ir0+nrgmax-1,nrg)
          call byte_readp(bufr,vi,lrs4,ir0,ir1,re2off_b/4
      $      ,li,npr,ifbswap,.true.,re2fle,ierr)
@@ -1046,9 +1060,14 @@ c     parameter(nrmax = 12*lelt) ! maximum number of records
             call icopy       (bufr,vi(3,i),lrs4)
             call buf_to_curve(bufr)
          enddo
+         mrg=mrg+n
       enddo
 
       re2off_b = re2off_b + nrg*lrs4*4
+      mrg=iglsum(mrg,1)
+
+      if (nio.eq.0) write (6,'(a33,i10,i8,i5)')
+     $   'done  reading curved sides (rd2) ',re2off_b,mrg,iloop
 
       return
 
@@ -1110,7 +1129,8 @@ c     parameter(nrmax = 6*lelt) ! maximum number of records
          return
       endif
 
-      if (nio.eq.0) write (6,*) 'reading bc (rd2) ',re2off_b,ifield,nrg
+      if (nio.eq.0) write (6,'(a23,i5,i10,i8)')
+     $   'start reading bc (rd2) ',ifield,re2off_b,nrg
 
       ! fill up with default
       do iel=1,nelt
@@ -1123,7 +1143,11 @@ c     parameter(nrmax = 6*lelt) ! maximum number of records
 
       ir0=1
       ir1=1
+      iloop=0
+      mrg=0
+
       do while (ir0.le.nrg)
+         iloop=iloop+1
          ir1=min(ir0+nrgmax-1,nrg)
          ir00=ir0
          call byte_readp(bufr,vi,lrs4,ir0,ir1,re2off_b/4
@@ -1137,9 +1161,14 @@ c     parameter(nrmax = 6*lelt) ! maximum number of records
             call icopy    (bufr,vi(3,i),lrs4)
             call buf_to_bc(cbl,bl,bufr)
          enddo
+         mrg=mrg+n
       enddo
 
       re2off_b = re2off_b + nrg*4*lrs4
+      mrg=iglsum(mrg,1)
+
+      if (nio.eq.0) write (6,'(a23,i5,i10,i8,i5)')
+     $   'done  reading bc (rd2) ',ifield,re2off_b,mrg,iloop
 
       if (ierr.gt.0) goto 100
 

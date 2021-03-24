@@ -508,6 +508,23 @@ c    1       format(a5,2i12,i2)
       enddo
 #endif
 
+#ifdef DEBUG
+      if (nid.eq.0) then
+         do ie=1,nelt
+            if (ie.eq.1) then
+                open (unit=10,file='con0.dat')
+            else
+                open (unit=10,file='con0.dat',access='APPEND')
+            endif
+            do i=1,nvi+1
+                write (10,'(i8,i8)') lglel(ie),wk(i+(ie-1)*(nvi+1))
+            enddo
+            close (unit=10)
+         enddo
+      endif
+      call nekgsync
+#endif
+
       return
 
  100  continue

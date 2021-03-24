@@ -477,6 +477,8 @@ c    1       format(a5,2i12,i2)
             melgt=melgt+nel
          enddo
 
+         melgt=iglsum(melgt,1)
+
          if (nio.eq.0) write (6,'(a24,i10,i8)')
      $      'done  reading con (rd2) ',offs0+4*melgt*(nvi+1),melgt
 

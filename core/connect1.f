@@ -82,10 +82,6 @@ C
       ifield=2
       call setupds(gsh_fld(2),lx1,ly1,lz1,nelt,nelgt,vertex,glo_num)
 
-      if(nid.eq.0) write(6,*) ''
-      call printPartStat(glo_num,nelt,lx1*ly1*lz1,nekcomm)
-      if(nid.eq.0) write(6,*) ''
-
       ifield=jfield
 
 c     if (ifmvbd) call setup_mesh_dssum ! Set up dssum for mesh

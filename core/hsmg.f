@@ -124,6 +124,7 @@ c----------------------------------------------------------------------
       include 'INPUT'
       include 'PARALLEL'
       include 'HSMG'
+      include 'TSTEP'
       parameter (lxyz=(lx1+2)*(ly1+2)*(lz1+2))
       common /c_is1/ glo_num(lxyz*lelv)
       common /ivrtx/ vertex ((2**ldim)*lelt)
@@ -139,6 +140,9 @@ c     set up direct stiffness summation for each level
 
 c++   write(6,*) mg_fld,' mgfld in hsmg_setup_dssum'
 
+      jfield=ifield
+      ifield=mg_fld
+
       do l=1,mg_lmax-1
          nx=mg_nh(l)
          ny=mg_nh(l)
@@ -152,6 +156,10 @@ c++   write(6,*) mg_fld,' mgfld in hsmg_setup_dssum'
          call setupds(mg_gsh_schwarz_handle(l,mg_fld),nx,ny,nz
      $                ,nelv,nelgv,vertex,glo_num)
       enddo
+
+      ifield=jfield
+
+      return
       end
 c----------------------------------------------------------------------
       subroutine h1mg_setup_wtmask
@@ -2362,6 +2370,7 @@ c----------------------------------------------------------------------
       include 'INPUT'
       include 'PARALLEL'
       include 'HSMG'
+      include 'TSTEP'
       parameter (lxyz=(lx1+2)*(ly1+2)*(lz1+2))
       common /c_is1/ glo_num(lxyz*lelt)
       common /ivrtx/ vertex ((2**ldim)*lelt)
@@ -2374,6 +2383,9 @@ c----------------------------------------------------------------------
       ncrnr = 2**ldim
       call get_vert
 
+
+      jfield=ifield
+      ifield=mg_fld
 
       do l=1,mg_lmax  ! set up direct stiffness summation for each level
          nx=mg_nh(l)
@@ -2388,6 +2400,8 @@ c----------------------------------------------------------------------
          call setupds(mg_gsh_schwarz_handle(l,mg_fld),nx,ny,nz
      $                ,nelv,nelgv,vertex,glo_num)
       enddo
+
+      ifield=jfield
 
       return
       end

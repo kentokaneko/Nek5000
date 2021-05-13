@@ -74,47 +74,19 @@ C
 
       ncrnr = 2**ldim
 
-      if (nelgv.eq.nelgt) then
-         call get_vert
-         call setupds(gsh_fld(1),lx1,ly1,lz1,nelv,nelgv,vertex,glo_num)
-         gsh_fld(2)=gsh_fld(1)
+      jfield=ifield
 
-c        call gs_counter(glo_num,gsh_fld(1))
+      call get_vert
+      ifield=1
+      call setupds(gsh_fld(1),lx1,ly1,lz1,nelv,nelgv,vertex,glo_num)
+      ifield=2
+      call setupds(gsh_fld(2),lx1,ly1,lz1,nelt,nelgt,vertex,glo_num)
 
-      else
+      if(nid.eq.0) write(6,*) ''
+      call printPartStat(glo_num,nelt,lx1*ly1*lz1,nekcomm)
+      if(nid.eq.0) write(6,*) ''
 
-c
-c        For conjugate heat transfer, it is assumed that fluid
-c        elements are listed both globally and locally with lower
-c        element numbers than the solid elements.
-c
-c        We currently assume that there is at least one fluid elem.
-c        per processor.
-c
-
-         call get_vert
-c        call outmati(vertex,4,nelv,'vrtx V')
-         call setupds(gsh_fld(1),lx1,ly1,lz1,nelv,nelgv,vertex,glo_num)
-
-c        call get_vert  (vertex, ncrnr, nelgt, '.mp2')  !  LATER !
-c        call outmati(vertex,4,nelt,'vrtx T')
-         call setupds(gsh_fld(2),lx1,ly1,lz1,nelt,nelgt,vertex,glo_num)
-
-c
-c        Feb 20, 2012:  It appears that we do not need this restriction: (pff)
-c
-c        check if there is a least one fluid element on each processor
-c        do iel = 1,nelt
-c           ieg = lglel(iel)
-c           if (ieg.le.nelgv) goto 101 
-c        enddo
-c        if(nio.eq.0) write(6,*) 
-c    &     'ERROR: each domain must contain at least one fluid element!'
-c        call exitt
-c 101   continue
-
-      endif
-
+      ifield=jfield
 
 c     if (ifmvbd) call setup_mesh_dssum ! Set up dssum for mesh
 
